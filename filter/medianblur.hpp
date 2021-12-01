@@ -1,5 +1,4 @@
-#ifndef _MEDIANBLUR
-#define _MEDIANBLUR
+#pragma once
 
 #include <filter/filter.hpp>
 
@@ -14,5 +13,3 @@ namespace filter {
             int m_kernel_size;
     };
 }
-
-#endif

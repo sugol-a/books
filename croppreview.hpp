@@ -1,5 +1,4 @@
-#ifndef CROPPREVIEW_H_
-#define CROPPREVIEW_H_
+#pragma once
 
 #include <gtkmm.h>
 #include <crop.hpp>
@@ -27,5 +26,3 @@ namespace ui {
         cv::Rect m_crop;
     };
 }
-
-#endif

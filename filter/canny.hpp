@@ -1,6 +1,4 @@
-#ifndef _CANNY_H
-#define _CANNY_H
-
+#pragma once
 #include <filter/filter.hpp>
 
 namespace filter {
@@ -13,5 +11,3 @@ namespace filter {
             void get_thresholds(cv::Mat const& img, double& low, double& high);
     };
 }
-
-#endif

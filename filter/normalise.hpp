@@ -1,5 +1,4 @@
-#ifndef _NORMALISE_H
-#define _NORMALISE_H
+#pragma once
 
 #include <filter/filter.hpp>
 
@@ -10,5 +9,3 @@ namespace filter {
             cv::Mat apply(cv::Mat const& img) override;
     };
 }
-
-#endif

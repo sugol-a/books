@@ -1,5 +1,4 @@
-#ifndef _FILTERCHAIN_H
-#define _FILTERCHAIN_H
+#pragma once
 
 #include <opencv2/imgproc.hpp>
 #include <vector>
@@ -19,5 +18,3 @@ namespace filter {
             std::vector<cv::Mat> m_cache;
     };
 }
-
-#endif

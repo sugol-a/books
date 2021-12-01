@@ -1,5 +1,4 @@
-#ifndef IMAGELOADER_H_
-#define IMAGELOADER_H_
+#pragma once
 
 #include <vector>
 #include <memory>
@@ -25,5 +24,3 @@ public:
     Image get_single(const std::string& filename);
     std::vector<Image> get_many(const std::string& directory);
 };
-
-#endif // IMAGELOADER_H_

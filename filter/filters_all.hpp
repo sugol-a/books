@@ -1,9 +1,6 @@
-#ifndef _FILTERS_ALL
-#define _FILTERS_ALL
+#pragma once
 
 #include <filter/bgr2grey.hpp>
 #include <filter/medianblur.hpp>
 #include <filter/normalise.hpp>
 #include <filter/canny.hpp>
-
-#endif

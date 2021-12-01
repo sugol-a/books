@@ -1,5 +1,4 @@
-#ifndef _FILTER_H
-#define _FILTER_H
+#pragma once
 
 #include <opencv2/imgproc.hpp>
 
@@ -10,5 +9,3 @@ namespace filter {
             virtual cv::Mat apply(cv::Mat const& img) = 0;
     };
 }
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef CROP_H_
-#define CROP_H_
+#pragma once
 
 #define MIN_RELATIVE_BOX_SIZE 0.03
 
@@ -22,5 +21,3 @@ public:
     private:
         filter::FilterChain m_filterchain;
 };
-
-#endif // CROP_H_
