@@ -18,6 +18,7 @@ namespace filter {
     void CannyFilter::get_thresholds(const cv::Mat& img, double& low, double& high) {
         cv::Mat dummy;
 
+        // Automagically determine threshold values for the canny filter. Do you know how this works? I sure don't.
         high = cv::threshold(img, dummy, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
         low = 0.5 * high;
     }

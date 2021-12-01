@@ -1,3 +1,4 @@
+#include "filter/canny.hpp"
 #include "filter/medianblur.hpp"
 #include <filter/filterchain.hpp>
 
@@ -11,9 +12,11 @@ namespace filter {
         m_filters.emplace_back(new BGR2GreyFilter);
         m_filters.emplace_back(new MedianBlurFilter(11));
         m_filters.emplace_back(new NormaliseFilter);
+        m_filters.emplace_back(new CannyFilter);
     }
 
     cv::Mat FilterChain::apply_filters(cv::Mat& img) {
+        // Clear the previous results
         m_cache.clear();
 
         cv::Mat filter_result = img;

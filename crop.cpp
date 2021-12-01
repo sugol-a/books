@@ -7,14 +7,7 @@ Cropper::Cropper() {}
 
 cv::Rect Cropper::auto_crop(CVImage& image, int margin, bool remove_whiteboard, int kernel_size) {
     float image_area = image.total();
-    CVImage image_gray;
-
-    cv::cvtColor(image, image_gray, cv::COLOR_BGR2GRAY);
-
-    CVImage edges;
-    cv::medianBlur(image_gray, image_gray, kernel_size);
-    //cv::Canny(image_gray, edges, 100, 200);
-    auto_canny(image_gray, edges);
+    cv::Mat edges = m_filterchain.apply_filters(image);
 
     std::vector<std::vector<cv::Point>> contours;
     std::vector<cv::Point> hierarchy;

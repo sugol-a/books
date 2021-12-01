@@ -28,6 +28,7 @@ sources = [ 'books.cpp',
                'filter/bgr2grey.cpp',
                'filter/medianblur.cpp',
                'filter/normalise.cpp',
+               'filter/canny.cpp',
                ui_res ]
 
 executable('books',

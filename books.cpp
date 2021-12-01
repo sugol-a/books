@@ -21,7 +21,7 @@ static void on_startup(Glib::RefPtr<Gtk::Application> app) {
 }
 
 int main(int argc, char *argv[]) {
-    {
+    /*{
         CVImage image = cv::imread(argv[1]);
         filter::FilterChain filters;
 
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 
         //cv::imshow("Books", cropped);
         //cv::waitKey(0);
-    }
+    }*/
 
     /* {
         Cropper c;

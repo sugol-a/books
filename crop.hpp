@@ -4,6 +4,7 @@
 #define MIN_RELATIVE_BOX_SIZE 0.03
 
 #include <imageloader.hpp>
+#include <filter/filterchain.hpp>
 
 class Cropper {
 public:
@@ -17,6 +18,9 @@ public:
     private:
     void auto_canny(CVImage& image, CVImage& edges);
     cv::Rect enclose_bounding_boxes(std::vector<cv::Rect> boxes);
+
+    private:
+        filter::FilterChain m_filterchain;
 };
 
 #endif // CROP_H_
