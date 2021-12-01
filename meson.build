@@ -18,7 +18,17 @@ ui_res = gnome.compile_resources(
   source_dir: 'assets',
   c_name: 'ui_res')
 
-sources = [ 'books.cpp', 'crop.cpp', 'imageloader.cpp', 'mainwindow.cpp', 'croppreview.cpp', ui_res ]
+sources = [ 'books.cpp',
+               'crop.cpp',
+               'imageloader.cpp',
+               'mainwindow.cpp',
+               'croppreview.cpp',
+               'filter/filter.cpp',
+               'filter/filterchain.cpp',
+               'filter/bgr2grey.cpp',
+               'filter/medianblur.cpp',
+               'filter/normalise.cpp',
+               ui_res ]
 
 executable('books',
            sources,

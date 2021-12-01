@@ -12,6 +12,8 @@
 #include <crop.hpp>
 #include <ui-resources.h>
 
+#include <filter/filterchain.hpp>
+
 static void on_startup(Glib::RefPtr<Gtk::Application> app) {
     ui::MainWindow* window = ui::MainWindow::create();
     app->add_window(*window);
@@ -20,8 +22,15 @@ static void on_startup(Glib::RefPtr<Gtk::Application> app) {
 
 int main(int argc, char *argv[]) {
     {
-        //Cropper c;
-        //CVImage image = cv::imread(argv[1]);
+        CVImage image = cv::imread(argv[1]);
+        filter::FilterChain filters;
+
+        cv::Mat result = filters.apply_filters(image);
+
+        cv::imshow("Filter result", result);
+        cv::waitKey(0);
+        return 0;
+
         //CVImage cropped = c.auto_crop(image, 100);
 
         //cv::imshow("Books", cropped);
