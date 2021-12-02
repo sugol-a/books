@@ -10,8 +10,10 @@ namespace filter {
         // TODO: Allow for custom filter chains
 
         m_filters.emplace_back(new BGR2GreyFilter);
-        m_filters.emplace_back(new MedianBlurFilter(11));
+        m_filters.emplace_back(new MedianBlurFilter(17));
         m_filters.emplace_back(new NormaliseFilter);
+        m_filters.emplace_back(new DilateFilter);
+        m_filters.emplace_back(new ThresholdFilter);
         m_filters.emplace_back(new CannyFilter);
     }
 
@@ -30,5 +32,9 @@ namespace filter {
 
     const cv::Mat& FilterChain::get_cached(size_t index) {
         return m_cache[index];
+    }
+
+    size_t FilterChain::length() const {
+        return m_filters.size();
     }
 }
