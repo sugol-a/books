@@ -23,7 +23,7 @@ Image::Image(const Image& other) {
 }
 
 void Image::load() {
-    image = std::make_unique<CVImage>(cv::imread(filename));
+    image = std::make_unique<CVImage>(cv::imread(filename.string()));
 }
 
 Image ImageLoader::get_single(const std::string& filename) {
@@ -41,9 +41,9 @@ std::vector<Image> ImageLoader::get_many(const std::string& directory) {
 
     for (auto& entry : std::filesystem::directory_iterator{path}) {
         // If this entry is one of our allowed image files, then add it to the return vector
-        std::string extension = entry.path().extension();
+        std::string extension = entry.path().extension().string();
         if (entry.is_regular_file() && ALLOWED_EXT.find(extension) != ALLOWED_EXT.end()) {
-            Image img = get_single(entry.path());
+            Image img = get_single(entry.path().string());
             images.push_back(img);
         }
     }
