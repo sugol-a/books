@@ -1,9 +1,4 @@
-#include "gtkmm/cellrenderertext.h"
-#include "gtkmm/messagedialog.h"
-#include "sigc++/functors/mem_fun.h"
-#include <gdkmm-3.0/gdkmm/device.h>
-#include <gtkmm-3.0/gtkmm/dialog.h>
-#include <gtkmm-3.0/gtkmm/enums.h>
+#include <gtkmm.h>
 #include <iostream>
 
 #include <iterator>

@@ -4,7 +4,7 @@
 
 #include <croppreview.hpp>
 #include <imageloader.hpp>
-#include <imagepreview.hpp>>
+#include <imagepreview.hpp>
 
 namespace ui {
     class MainWindow : public Gtk::ApplicationWindow {
