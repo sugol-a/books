@@ -1,6 +1,6 @@
 project('books', 'cpp',
-  version : '0.1',
-  default_options : ['warning_level=3', 'cpp_std=c++17'])
+        version : '0.1',
+        default_options : ['warning_level=3', 'cpp_std=c++17'])
 
 deps = [
   dependency('opencv4'),
@@ -19,20 +19,24 @@ ui_res = gnome.compile_resources(
   c_name: 'ui_res')
 
 sources = [ 'books.cpp',
-               'crop.cpp',
-               'imageloader.cpp',
-               'mainwindow.cpp',
-               'croppreview.cpp',
-               'filter/filter.cpp',
-               'filter/filterchain.cpp',
-               'filter/bgr2grey.cpp',
-               'filter/medianblur.cpp',
-               'filter/normalise.cpp',
-               'filter/canny.cpp',
-               ui_res ]
+            'crop.cpp',
+            'imageloader.cpp',
+            'mainwindow.cpp',
+            'croppreview.cpp',
+            'imagepreview.cpp',
+            'filter/filter.cpp',
+            'filter/filterchain.cpp',
+            'filter/bgr2grey.cpp',
+            'filter/medianblur.cpp',
+            'filter/normalise.cpp',
+            'filter/dilate.cpp',
+            'filter/threshold.cpp',
+            'filter/canny.cpp',
+            'util/box.cpp',
+            ui_res ]
 
 executable('books',
            sources,
            install : true,
            dependencies: deps,
-	   include_directories: inc)
+	       include_directories: inc)
