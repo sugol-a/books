@@ -76,15 +76,15 @@ namespace ui {
         }
 
         std::filesystem::path file_path = m_fileChooser->get_file()->get_path();
-        m_imageDirButton->set_label(file_path.filename().c_str());
+        m_imageDirButton->set_label(file_path.filename().string());
 
         m_imageFiles = m_imageLoader.get_many(m_fileChooser->get_file()->get_path());
         for (auto& img : m_imageFiles) {
             auto row = *(m_fileListStore->append());
-            row[m_fileColumns.m_inputName] = img.filename.filename().c_str();
-            row[m_fileColumns.m_outputName] = img.filename.filename().c_str();
+            row[m_fileColumns.m_inputName] = img.filename.filename().string();
+            row[m_fileColumns.m_outputName] = img.filename.filename().string();
             row[m_fileColumns.m_autoCrop] = true;
-            row[m_fileColumns.m_fullPath] = img.filename.c_str();
+            row[m_fileColumns.m_fullPath] = img.filename.string();
         }
 
         m_fileChooserSignal.disconnect();
@@ -98,7 +98,7 @@ namespace ui {
         }
 
         m_exportDirectory = m_fileChooser->get_file()->get_path();
-        m_exportDirButton->set_label(m_exportDirectory.filename().c_str());
+        m_exportDirButton->set_label(m_exportDirectory.filename().string());
 
         m_fileChooserSignal.disconnect();
         delete m_fileChooser;
@@ -192,7 +192,7 @@ namespace ui {
             }
 
             std::filesystem::path full_output_path = m_exportDirectory.string() + "/" + std::string(output_filename);
-            cv::imwrite(full_output_path, output_image);
+            cv::imwrite(full_output_path.string(), output_image);
 
             std::cout << input_filename << " -> " << output_filename << ", " << do_crop << std::endl;
         }

@@ -63,6 +63,6 @@ namespace ui {
 
     void CropPreview::load_image_buffer() {
         // Load this image in seperately from the opencv data, since cairo doesn't seem to support BGR
-        m_imageBuffer = Gdk::Pixbuf::create_from_file(m_currentImage->filename);
+        m_imageBuffer = Gdk::Pixbuf::create_from_file(m_currentImage->filename.string());
     }
 }
