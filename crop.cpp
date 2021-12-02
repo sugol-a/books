@@ -1,6 +1,8 @@
 #include <vector>
 #include <algorithm>
 
+#include <opencv2/objdetect.hpp>
+#include <util/box.hpp>
 #include <crop.hpp>
 
 Cropper::Cropper() {}
@@ -10,37 +12,50 @@ cv::Rect Cropper::auto_crop(CVImage& image, int margin, bool remove_whiteboard, 
     cv::Mat edges = m_filterchain.apply_filters(image);
 
     std::vector<std::vector<cv::Point>> contours;
-    std::vector<cv::Point> hierarchy;
-
     cv::findContours(edges, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
 
     std::vector<cv::Rect> bounding_boxes;
     for (auto c : contours) {
         cv::Rect box = cv::boundingRect(c);
-        float area = box.width * box.height;
+        bounding_boxes.push_back(box);
 
-        if (area / image_area >= MIN_RELATIVE_BOX_SIZE) {
-            bounding_boxes.push_back(box);
-        }
+        // if (box.area() / image_area >= MIN_RELATIVE_BOX_SIZE) {
+        //     bounding_boxes.push_back(box);
+        // }
     }
 
     if (bounding_boxes.size() == 0) {
         return cv::Rect(0, 0, 0, 0);
     }
 
-    if (remove_whiteboard) {
-        if (bounding_boxes.size() == 1) {
-            return cv::Rect(0, 0, 0, 0);
+
+    cv::groupRectangles(bounding_boxes, 0, 10);
+
+    util::Point image_center = {(unsigned int)image.size().width / 2, (unsigned int)image.size().height / 2};
+    util::Box midbox = bounding_boxes[0];
+
+    // Find the box that is closest to the image center
+    for (util::Box box : bounding_boxes) {
+        if (image_center.distance_to(box.midpoint()) < image_center.distance_to(midbox.midpoint())) {
+            midbox = box;
         }
-
-        // Sort bounding boxes by x-position
-        std::sort(bounding_boxes.begin(), bounding_boxes.end(), [](cv::Rect r1, cv::Rect r2) {
-            return r1.x < r2.x;
-        });
-
-        // Remove the first bounding box (the whiteboard)
-        bounding_boxes.erase(bounding_boxes.begin());
     }
+
+    return midbox;
+
+    // if (remove_whiteboard) {
+    //     if (bounding_boxes.size() == 1) {
+    //         return cv::Rect(0, 0, 0, 0);
+    //     }
+
+    //     // Sort bounding boxes by x-position
+    //     std::sort(bounding_boxes.begin(), bounding_boxes.end(), [](cv::Rect r1, cv::Rect r2) {
+    //         return r1.x < r2.x;
+    //     });
+
+    //     // Remove the first bounding box (the whiteboard)
+    //     bounding_boxes.erase(bounding_boxes.begin());
+    // }
 
     // for (auto b : bounding_boxes) {
     //     cv::Point pt1(b.x, b.y);
@@ -49,37 +64,31 @@ cv::Rect Cropper::auto_crop(CVImage& image, int margin, bool remove_whiteboard, 
     // }
 
     // Get the enclosing box
-    cv::Rect enclosing = enclose_bounding_boxes(bounding_boxes);
+    // cv::Rect enclosing = enclose_bounding_boxes(bounding_boxes);
 
-    // Pad out the enclosing box with a margin
-    enclosing.x -= margin; enclosing.x = std::max(enclosing.x, 0);
-    enclosing.y -= margin; enclosing.y = std::max(enclosing.y, 0);
-    enclosing.width += margin * 2;
-    enclosing.width = std::min(enclosing.width, image.size().width - enclosing.x);
-    enclosing.height += margin * 2;
-    enclosing.height = std::min(enclosing.height, image.size().height - enclosing.y);
-
-    return enclosing;
+    // // Pad out the enclosing box with a margin
+    // enclosing.x -= margin; enclosing.x = std::max(enclosing.x, 0);
+    // enclosing.y -= margin; enclosing.y = std::max(enclosing.y, 0);
+    // enclosing.width += margin * 2;
+    // enclosing.width = std::min(enclosing.width, image.size().width - enclosing.x);
+    // enclosing.height += margin * 2;
+    // enclosing.height = std::min(enclosing.height, image.size().height - enclosing.y);
+    //
 }
 
-void Cropper::auto_canny(CVImage& image, CVImage& edges) {
-    cv::Mat dummy;
-
-    double otsu_thres = cv::threshold(image, dummy, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
-    double low_thres = otsu_thres * 0.5;
-
-    cv::Canny(image, edges, low_thres, otsu_thres);
+filter::FilterChain& Cropper::get_filterchain() {
+    return m_filterchain;
 }
 
-cv::Rect Cropper::enclose_bounding_boxes(std::vector<cv::Rect> boxes) {
+cv::Rect Cropper::enclose_bounding_boxes(std::vector<util::Box> boxes) {
     std::vector<int> x_vals;
     std::vector<int> y_vals;
 
-    for (auto& rect : boxes) {
-        x_vals.push_back(rect.x);
-        x_vals.push_back(rect.x + rect.width);
-        y_vals.push_back(rect.y);
-        y_vals.push_back(rect.y + rect.height);
+    for (auto& box : boxes) {
+        x_vals.push_back(box.top_left().x);
+        x_vals.push_back(box.bottom_right().x);
+        y_vals.push_back(box.top_left().y);
+        y_vals.push_back(box.bottom_right().y);
     }
 
     // TODO: Sort the two lists beforehand so we don't have to use
