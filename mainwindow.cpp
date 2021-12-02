@@ -15,26 +15,31 @@ namespace ui {
         m_imageDirButton = ref_builder->get_widget<Gtk::Button>("btnImageDirectory");
         m_exportDirButton = ref_builder->get_widget<Gtk::Button>("btnExportDirectory");
         m_exportButton = ref_builder->get_widget<Gtk::Button>("btnExport");
+        m_layerButton = ref_builder->get_widget<Gtk::SpinButton>("spinBtnLayer");
         m_fileTreeView = ref_builder->get_widget<Gtk::TreeView>("filesTreeView");
-        m_previewPane = Gtk::Builder::get_widget_derived<ui::CropPreview>(ref_builder, "preview");
+        m_previewPane = Gtk::Builder::get_widget_derived<ui::ImagePreview>(ref_builder, "preview");
+        // m_previewPane = Gtk::Builder::get_widget_derived<ui::CropPreview>(ref_builder, "preview");
 
         m_imageDirButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::change_input_directory));
         m_exportDirButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::change_output_directory));
         m_exportButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::do_export));
+        m_layerButton->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::change_layer));
 
         m_fileListStore = Gtk::ListStore::create(m_fileColumns);
         m_fileTreeView->set_model(m_fileListStore);
         m_fileTreeView->append_column("File", m_fileColumns.m_inputName);
         m_fileTreeView->append_column_editable("Output", m_fileColumns.m_outputName);
         m_fileTreeView->append_column_editable("Autocrop", m_fileColumns.m_autoCrop);
-        m_fileTreeView->signal_row_activated().connect(sigc::mem_fun(*this, &MainWindow::change_preview));
+        m_fileTreeView->signal_row_activated().connect(sigc::mem_fun(*this, &MainWindow::selection_changed));
 
         m_exportErrorDialog = new Gtk::MessageDialog(*this,
                                                          "Please select an export directory", 
                                                          false,
                                                          Gtk::MessageType::ERROR,
                                                          Gtk::ButtonsType::OK,
-                                                         true);
+                                                     true);
+
+        m_viewLayer = -1;
     }
 
     MainWindow::~MainWindow() {
@@ -104,30 +109,51 @@ namespace ui {
         delete m_fileChooser;
     }
 
-    void MainWindow::change_preview(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*) {
+    void MainWindow::change_layer() {
+        m_viewLayer = m_layerButton->get_value_as_int();
+        update_preview();
+    }
+
+    void MainWindow::selection_changed(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*) {
+        update_preview();
+    }
+
+    void MainWindow::update_preview() {
         // Get the currently selected row
         auto selection = m_fileTreeView->get_selection();
         auto selected = selection->get_selected();
 
         if (selected) {
             auto row = *selected;
-            std::cout << row[m_fileColumns.m_fullPath] << std::endl;
 
             // Search for the selected image
             for (Image& i : m_imageFiles) {
                 Glib::ustring row_value = row[m_fileColumns.m_fullPath];
                 if (i.filename == std::string(row_value)) {
                     i.load();
-                    m_previewPane->set_image(&i);
+                    cv::Rect crop = get_crop_rect(i);
 
-                    if (row[m_fileColumns.m_autoCrop]) {
-                        cv::Rect crop = get_crop_rect(i);
-                        m_previewPane->set_crop(crop);
-                        m_previewPane->set_enable(true);
+                    if (m_viewLayer == -1) {
+                        m_previewPane->set_image(*i.image);
+
                     } else {
-                        m_previewPane->set_enable(false);
+                        filter::FilterChain& chain = m_cropper.get_filterchain();
+                        if (m_viewLayer < chain.length()) {
+                            m_previewPane->set_image(chain.get_cached(m_viewLayer));
+                        }
                     }
 
+                    if (row[m_fileColumns.m_autoCrop]) {
+                        m_previewPane->set_box(crop);
+                        m_previewPane->set_show_box(true);
+                        // m_previewPane->set_crop(crop);
+                        // m_previewPane->set_enable(true);
+                    } else {
+                        m_previewPane->set_show_box(false);
+                        //m_previewPane->set_enable(false);
+                    }
+
+                    m_previewPane->queue_draw();
                     break;
                 }
             }
@@ -135,15 +161,14 @@ namespace ui {
     }
 
     cv::Rect MainWindow::get_crop_rect(Image& image) {
-        if (m_cropRects.find(image.filename) != m_cropRects.end()) {
-            return m_cropRects[image.filename];
-        } else {
+        //if (m_cropRects.find(image.filename) != m_cropRects.end()) {
+        //    return m_cropRects[image.filename];
+        //} else {
             // No crop rectangle has been calculated, calculate and cache it
-            Cropper c;
-            image.load();
-            m_cropRects[image.filename] = c.auto_crop(*image.image);
+        //    image.load();
+            m_cropRects[image.filename] = m_cropper.auto_crop(*image.image);
             return m_cropRects[image.filename];
-        }
+        //}
     }
 
     void MainWindow::do_export() {
