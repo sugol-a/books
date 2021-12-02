@@ -12,11 +12,11 @@ namespace util {
         m_bottomRight.y = rect.y + rect.height;
     }
 
-    Point Box::midpoint() const {
-        Point mid;
+    Point<int> Box::midpoint() const {
+        Point<int> mid;
 
-        mid.x = (m_bottomRight.x - m_topLeft.x) / 2;
-        mid.y = (m_bottomRight.y - m_topLeft.y) / 2;
+        mid.x = m_topLeft.x + width() / 2;
+        mid.y = m_topLeft.y + height() / 2;
 
         return mid;
     }
@@ -33,11 +33,11 @@ namespace util {
         return m_bottomRight.y - m_topLeft.y;
     }
 
-    Point Box::top_left() const {
+    Point<int>& Box::top_left() {
         return m_topLeft;
     }
 
-    Point Box::bottom_right() const {
+    Point<int>& Box::bottom_right() {
         return m_bottomRight;
     }
 

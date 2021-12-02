@@ -10,16 +10,16 @@ namespace util {
         Box();
         Box(cv::Rect const& rect);
 
-        Point midpoint() const;
+        Point<int> midpoint() const;
         unsigned long area() const;
         unsigned int width() const;
         unsigned int height() const;
-        Point top_left() const;
-        Point bottom_right() const;
+        Point<int>& top_left();
+        Point<int>& bottom_right();
         operator cv::Rect() const;
 
     private:
-        Point m_topLeft;
-        Point m_bottomRight;
+        Point<int> m_topLeft;
+        Point<int> m_bottomRight;
     };
 }

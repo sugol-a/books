@@ -5,7 +5,8 @@ project('books', 'cpp',
 deps = [
   dependency('opencv4'),
   dependency('gtkmm-4.0'),
-  dependency('cairomm-1.0')
+  dependency('cairomm-1.0'),
+  dependency('threads')
 ]
 
 inc = include_directories('.')
@@ -19,11 +20,15 @@ ui_res = gnome.compile_resources(
   c_name: 'ui_res')
 
 sources = [ 'books.cpp',
-            'crop.cpp',
+            #'crop.cpp',
             'imageloader.cpp',
             'mainwindow.cpp',
             'croppreview.cpp',
             'imagepreview.cpp',
+            'image.cpp',
+            'imagestore.cpp',
+            'featuredetector.cpp',
+            'fitnessmetrics.cpp',
             'filter/filter.cpp',
             'filter/filterchain.cpp',
             'filter/bgr2grey.cpp',

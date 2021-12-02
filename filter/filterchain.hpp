@@ -11,7 +11,7 @@ namespace filter {
         public:
             FilterChain();
             cv::Mat apply_filters(cv::Mat& img);
-            const cv::Mat& get_cached(size_t index);
+            std::vector<cv::Mat> cached();
             size_t length() const;
 
         private:

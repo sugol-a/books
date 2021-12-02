@@ -2,7 +2,6 @@
 
 #define MIN_RELATIVE_BOX_SIZE 0.03
 
-#include <imageloader.hpp>
 #include <util/box.hpp>
 #include <filter/filterchain.hpp>
 
@@ -10,7 +9,7 @@ class Cropper {
     public:
         Cropper();
 
-        cv::Rect auto_crop(CVImage& image,
+        cv::Rect auto_crop(cv::Mat& image,
                            int margin = 32,
                            bool remove_whiteboard = true,
                            int kernel_size = 11);

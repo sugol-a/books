@@ -2,6 +2,8 @@
 
 #include <gtkmm.h>
 
+#include <featuredetector.hpp>
+#include <imagestore.hpp>
 #include <croppreview.hpp>
 #include <imageloader.hpp>
 #include <imagepreview.hpp>
@@ -17,6 +19,8 @@ namespace ui {
             static MainWindow* create();
 
         private:
+            static constexpr float CV_PRESCALING = 0.1;
+
             void change_input_directory();
             void change_output_directory();
             void selected_input_directory(int id);
@@ -26,8 +30,6 @@ namespace ui {
 
             void selection_changed(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*);
             void update_preview();
-
-            cv::Rect get_crop_rect(Image& image);
 
             void do_export();
 
@@ -39,16 +41,21 @@ namespace ui {
                         add(m_outputName);
                         add(m_autoCrop);
                         add(m_fullPath);
+                        add(m_features);
+                        add(m_processingLayers);
                     }
 
                     Gtk::TreeModelColumn<Glib::ustring> m_inputName;
                     Gtk::TreeModelColumn<Glib::ustring> m_outputName;
                     Gtk::TreeModelColumn<bool> m_autoCrop;
                     Gtk::TreeModelColumn<Glib::ustring> m_fullPath;
+                    Gtk::TreeModelColumn<std::vector<std::pair<double,util::Box>>> m_features;
+                    Gtk::TreeModelColumn<std::vector<cv::Mat>> m_processingLayers;
             };
 
-            ImageLoader m_imageLoader;
-            std::vector<Image> m_imageFiles;
+            img::ImageStore m_imageStore;
+            ft::FeatureDetector m_featureDetector;
+
             std::filesystem::path m_exportDirectory;
 
             Gtk::MessageDialog* m_exportErrorDialog;
@@ -66,10 +73,7 @@ namespace ui {
             ImageModelColumns m_fileColumns;
             Gtk::TreeView::Column m_outputFileColumn;
 
-            Cropper m_cropper;
-            //ui::CropPreview* m_previewPane;
             ui::ImagePreview* m_previewPane;
-            std::map<std::filesystem::path, cv::Rect> m_cropRects;
             int m_viewLayer;
     };
 }

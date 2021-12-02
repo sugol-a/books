@@ -1,12 +1,13 @@
 #include <gtkmm.h>
 #include <iostream>
 
-#include <iterator>
+#include <opencv2/highgui.hpp>
+
 #include <mainwindow.hpp>
 
 namespace ui {
     MainWindow::MainWindow(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>& ref_builder)
-    : Gtk::ApplicationWindow(cobject) {
+        : Gtk::ApplicationWindow(cobject) {
         m_imageDirButton = ref_builder->get_widget<Gtk::Button>("btnImageDirectory");
         m_exportDirButton = ref_builder->get_widget<Gtk::Button>("btnExportDirectory");
         m_exportButton = ref_builder->get_widget<Gtk::Button>("btnExport");
@@ -28,10 +29,10 @@ namespace ui {
         m_fileTreeView->signal_row_activated().connect(sigc::mem_fun(*this, &MainWindow::selection_changed));
 
         m_exportErrorDialog = new Gtk::MessageDialog(*this,
-                                                         "Please select an export directory", 
-                                                         false,
-                                                         Gtk::MessageType::ERROR,
-                                                         Gtk::ButtonsType::OK,
+                                                     "Please select an export directory",
+                                                     false,
+                                                     Gtk::MessageType::ERROR,
+                                                     Gtk::ButtonsType::OK,
                                                      true);
 
         m_viewLayer = -1;
@@ -75,16 +76,32 @@ namespace ui {
             return;
         }
 
-        std::filesystem::path file_path = m_fileChooser->get_file()->get_path();
-        m_imageDirButton->set_label(file_path.filename().string());
+        std::string directory = m_fileChooser->get_file()->get_path();
 
-        m_imageFiles = m_imageLoader.get_many(m_fileChooser->get_file()->get_path());
-        for (auto& img : m_imageFiles) {
+        m_imageStore.clear();
+        m_imageStore.populate(directory);
+        m_imageDirButton->set_label(directory);
+
+        for (auto& f : m_imageStore.images()) {
+            img::Image img(f);
             auto row = *(m_fileListStore->append());
-            row[m_fileColumns.m_inputName] = img.filename.filename().string();
-            row[m_fileColumns.m_outputName] = img.filename.filename().string();
+
+            std::filesystem::path image_path = f;
+            row[m_fileColumns.m_inputName] = image_path.filename().string();
+            row[m_fileColumns.m_outputName] = image_path.filename().string();
             row[m_fileColumns.m_autoCrop] = true;
-            row[m_fileColumns.m_fullPath] = img.filename.string();
+            row[m_fileColumns.m_fullPath] = f;
+            row[m_fileColumns.m_features] =
+                m_featureDetector.find_candidate_features(img.mat(),
+                                                          {
+                                                              ft::distance_to(util::Point<double>{0, 0}),
+                                                              ft::relative_area(0.7)
+                                                          },
+                                                          {
+                                                              1,
+                                                              3
+                                                          }, CV_PRESCALING);
+            row[m_fileColumns.m_processingLayers] = m_featureDetector.filter_chain()->cached();
         }
 
         m_fileChooserSignal.disconnect();
@@ -120,32 +137,33 @@ namespace ui {
 
         if (selected) {
             auto row = *selected;
+            Glib::ustring row_value = row[m_fileColumns.m_fullPath];
 
             // Search for the selected image
-            for (Image& i : m_imageFiles) {
-                Glib::ustring row_value = row[m_fileColumns.m_fullPath];
-                if (i.filename == std::string(row_value)) {
-                    i.load();
-                    cv::Rect crop = get_crop_rect(i);
+            for (const std::string& filename : m_imageStore.images()) {
+                if (filename == std::string(row_value)) {
+                    img::Image img(filename);
+                    std::vector<std::pair<double, util::Box>> features = row[m_fileColumns.m_features];
+                    util::Box crop = m_featureDetector.best_candidate(features);
 
+                    m_previewPane->set_crop(crop);
                     if (m_viewLayer == -1) {
-                        m_previewPane->set_image(*i.image);
-
+                        m_previewPane->feature_scale(1);
+                        m_previewPane->set_image(img.mat());
                     } else {
-                        filter::FilterChain& chain = m_cropper.get_filterchain();
-                        if (m_viewLayer < chain.length()) {
-                            m_previewPane->set_image(chain.get_cached(m_viewLayer));
+                        std::vector<cv::Mat> layers = row[m_fileColumns.m_processingLayers];
+                        m_previewPane->feature_scale(CV_PRESCALING);
+
+                        if (m_viewLayer < layers.size()) {
+                            m_previewPane->set_image(layers[m_viewLayer]);
                         }
                     }
 
                     if (row[m_fileColumns.m_autoCrop]) {
-                        m_previewPane->set_box(crop);
-                        m_previewPane->set_show_box(true);
-                        // m_previewPane->set_crop(crop);
-                        // m_previewPane->set_enable(true);
+                        m_previewPane->set_features(features);
+                        m_previewPane->set_show_features(true);
                     } else {
-                        m_previewPane->set_show_box(false);
-                        //m_previewPane->set_enable(false);
+                        m_previewPane->set_show_features(false);
                     }
 
                     m_previewPane->queue_draw();
@@ -153,17 +171,6 @@ namespace ui {
                 }
             }
         }
-    }
-
-    cv::Rect MainWindow::get_crop_rect(Image& image) {
-        //if (m_cropRects.find(image.filename) != m_cropRects.end()) {
-        //    return m_cropRects[image.filename];
-        //} else {
-            // No crop rectangle has been calculated, calculate and cache it
-        //    image.load();
-            m_cropRects[image.filename] = m_cropper.auto_crop(*image.image);
-            return m_cropRects[image.filename];
-        //}
     }
 
     void MainWindow::do_export() {
@@ -174,21 +181,21 @@ namespace ui {
         }
 
         auto iter = m_fileListStore->children();
-        for (size_t i = 0; i < m_imageFiles.size(); i++) {
+        for (size_t i = 0; i < m_imageStore.images().size(); i++) {
             auto row = iter[i];
-            auto input_filename = row[m_fileColumns.m_fullPath];
+            Glib::ustring input_filename = row[m_fileColumns.m_fullPath];
             Glib::ustring output_filename = row[m_fileColumns.m_outputName];
             bool do_crop = row[m_fileColumns.m_autoCrop];
 
-            auto image = m_imageFiles[i];
-            image.load();
+            std::string image_filename = m_imageStore.images()[i];
+            img::Image img(image_filename);
 
             cv::Mat output_image;
-            cv::Rect crop_rect = get_crop_rect(image);
+            cv::Rect crop_rect = m_featureDetector.best_candidate(row[m_fileColumns.m_features]);
             if (do_crop && crop_rect.area() > 0) {
-                output_image = (*image.image)(crop_rect);
+                output_image = img.mat()(crop_rect);
             } else {
-                output_image = *image.image;
+                output_image = img.mat();
             }
 
             std::filesystem::path full_output_path = m_exportDirectory.string() + "/" + std::string(output_filename);
