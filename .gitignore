@@ -6,3 +6,4 @@ output/
 .cache
 .ccls-cache
 .vscode
+compile_commands.json
