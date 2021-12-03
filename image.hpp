@@ -11,13 +11,12 @@ namespace img {
         public:
             Image(std::string filename);
             cv::Mat mat();
-            const std::string& filename() const;
             Glib::RefPtr<Gdk::Pixbuf> pixbuf();
+            const std::string& filename() const;
 
         private:
             std::string m_filename;
             cv::Mat m_mat;
-            std::future<cv::Mat> m_matFuture;
             Glib::RefPtr<Gdk::Pixbuf> m_pixbuf;
     };
 }
