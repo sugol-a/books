@@ -11,6 +11,7 @@ namespace ui {
         m_imageDirButton = ref_builder->get_widget<Gtk::Button>("btnImageDirectory");
         m_exportDirButton = ref_builder->get_widget<Gtk::Button>("btnExportDirectory");
         m_exportButton = ref_builder->get_widget<Gtk::Button>("btnExport");
+        m_marginScale = ref_builder->get_widget<Gtk::Scale>("scaleMargins");
         m_layerButton = ref_builder->get_widget<Gtk::SpinButton>("spinBtnLayer");
         m_showFeaturesChk = ref_builder->get_widget<Gtk::CheckButton>("chkShowFeatures");
         m_showFitnessChk = ref_builder->get_widget<Gtk::CheckButton>("chkShowFitness");
@@ -21,6 +22,7 @@ namespace ui {
         m_imageDirButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::change_input_directory));
         m_exportDirButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::change_output_directory));
         m_exportButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::do_export));
+        m_marginScale->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::margins_changed));
         m_layerButton->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::change_layer));
         m_showFeaturesChk->signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
         m_showFitnessChk->signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
@@ -86,29 +88,6 @@ namespace ui {
         m_imageStore.populate(directory);
         m_imageDirButton->set_label(directory);
 
-        // for (auto& f : m_imageStore.images()) {
-        //     img::Image img(f);
-        //     auto row = *(m_fileListStore->append());
-
-        //     std::filesystem::path image_path = f;
-        //     row[m_fileColumns.m_inputName] = image_path.filename().string();
-        //     row[m_fileColumns.m_outputName] = image_path.filename().string();
-        //     row[m_fileColumns.m_autoCrop] = true;
-        //     row[m_fileColumns.m_fullPath] = f;
-        //     row[m_fileColumns.m_features] =
-        //         m_featureDetector.find_candidate_features(img.mat(),
-        //                                                   {
-        //                                                       ft::distance_to(util::Point<double>{0, 0}),
-        //                                                       ft::relative_area(0.5)
-        //                                                   },
-        //                                                   {
-        //                                                       2,
-        //                                                       5
-        //                                                   }, CV_PRESCALING);
-        //     row[m_fileColumns.m_processingLayers] = m_featureDetector.filter_chain()->cached();
-        // }
-        //
-
         m_fileChooserSignal.disconnect();
         delete m_fileChooser;
 
@@ -126,6 +105,10 @@ namespace ui {
 
         m_fileChooserSignal.disconnect();
         delete m_fileChooser;
+    }
+
+    void MainWindow::margins_changed() {
+        update_preview();
     }
 
     void MainWindow::start_list_store_worker() {
@@ -234,6 +217,10 @@ namespace ui {
                     std::vector<std::pair<double, util::Box>> features = row[m_fileColumns.m_features];
                     util::Box crop = m_featureDetector.best_candidate(features);
 
+                    // Expand the crop box to include margins
+                    crop.expand(m_marginScale->get_value(),
+                                util::Box(0, 0, img.pixbuf()->get_width(), img.pixbuf()->get_height()));
+
                     m_previewPane->set_crop(crop);
                     if (m_viewLayer == -1) {
                         m_previewPane->feature_scale(1);
@@ -279,9 +266,12 @@ namespace ui {
             img::Image img(image_filename);
 
             cv::Mat output_image;
-            cv::Rect crop_rect = m_featureDetector.best_candidate(row[m_fileColumns.m_features]);
-            if (do_crop && crop_rect.area() > 0) {
-                output_image = img.mat()(crop_rect);
+            util::Box crop = m_featureDetector.best_candidate(row[m_fileColumns.m_features]);
+
+            if (do_crop && crop.area() > 0) {
+                crop.expand(m_marginScale->get_value(),
+                            util::Box(0, 0, img.mat().size().width, img.mat().size().height));
+                output_image = img.mat()(crop);
             } else {
                 output_image = img.mat();
             }

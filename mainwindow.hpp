@@ -29,6 +29,8 @@ namespace ui {
             void selected_input_directory(int id);
             void selected_output_directory(int id);
 
+            void margins_changed();
+
             void start_list_store_worker();
             bool update_worker_progress();
 
@@ -73,6 +75,7 @@ namespace ui {
             Gtk::Button* m_imageDirButton;
             Gtk::Button* m_exportDirButton;
             Gtk::Button* m_exportButton;
+            Gtk::Scale* m_marginScale;
             Gtk::SpinButton* m_layerButton;
             Gtk::CheckButton* m_showFeaturesChk;
             Gtk::CheckButton* m_showFitnessChk;

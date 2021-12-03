@@ -89,6 +89,34 @@
                         </layout>
                       </object>
                     </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Margins</property>
+                        <property name="can-focus">0</property>
+                        <property name="halign">start</property>
+                        <property name="hexpand">1</property>
+                        <layout>
+                          <property name="column">0</property>
+                          <property name="row">2</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkScale" id="scaleMargins">
+                        <property name="hexpand">1</property>
+                        <property name="adjustment">
+                          <object class="GtkAdjustment">
+                          <property name="lower">-50</property>
+                          <property name="upper">200</property>
+                          <property name="value">0</property>
+                          </object>
+                        </property>
+                        <layout>
+                          <property name="column">1</property>
+                          <property name="row">2</property>
+                        </layout>
+                      </object>
+                    </child>
                   </object>
                 </child>
                 <child>
