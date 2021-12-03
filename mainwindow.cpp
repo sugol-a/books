@@ -12,6 +12,8 @@ namespace ui {
         m_exportDirButton = ref_builder->get_widget<Gtk::Button>("btnExportDirectory");
         m_exportButton = ref_builder->get_widget<Gtk::Button>("btnExport");
         m_layerButton = ref_builder->get_widget<Gtk::SpinButton>("spinBtnLayer");
+        m_showFeaturesChk = ref_builder->get_widget<Gtk::CheckButton>("chkShowFeatures");
+        m_showFitnessChk = ref_builder->get_widget<Gtk::CheckButton>("chkShowFitness");
         m_fileTreeView = ref_builder->get_widget<Gtk::TreeView>("filesTreeView");
         m_previewPane = Gtk::Builder::get_widget_derived<ui::ImagePreview>(ref_builder, "preview");
         // m_previewPane = Gtk::Builder::get_widget_derived<ui::CropPreview>(ref_builder, "preview");
@@ -20,6 +22,8 @@ namespace ui {
         m_exportDirButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::change_output_directory));
         m_exportButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::do_export));
         m_layerButton->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::change_layer));
+        m_showFeaturesChk->signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
+        m_showFitnessChk->signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
 
         m_fileListStore = Gtk::ListStore::create(m_fileColumns);
         m_fileTreeView->set_model(m_fileListStore);
@@ -95,11 +99,11 @@ namespace ui {
                 m_featureDetector.find_candidate_features(img.mat(),
                                                           {
                                                               ft::distance_to(util::Point<double>{0, 0}),
-                                                              ft::relative_area(0.7)
+                                                              ft::relative_area(0.5)
                                                           },
                                                           {
-                                                              1,
-                                                              3
+                                                              2,
+                                                              5
                                                           }, CV_PRESCALING);
             row[m_fileColumns.m_processingLayers] = m_featureDetector.filter_chain()->cached();
         }
@@ -126,6 +130,22 @@ namespace ui {
         update_preview();
     }
 
+    void MainWindow::overlay_toggled() {
+        m_previewPane->show_features(m_showFeaturesChk->get_active());
+
+        // It only makes sense to show fitness scores when features are enabled,
+        // so disable fitness scores when they're not
+        if (!m_showFeaturesChk->get_active()) {
+            m_showFitnessChk->set_active(false);
+            m_showFitnessChk->set_sensitive(false);
+        } else {
+            m_showFitnessChk->set_sensitive(true);
+        }
+
+        m_previewPane->show_fitness(m_showFitnessChk->get_active());
+        update_preview();
+    }
+
     void MainWindow::selection_changed(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*) {
         update_preview();
     }
@@ -149,7 +169,7 @@ namespace ui {
                     m_previewPane->set_crop(crop);
                     if (m_viewLayer == -1) {
                         m_previewPane->feature_scale(1);
-                        m_previewPane->set_image(img.mat());
+                        m_previewPane->set_image(img);
                     } else {
                         std::vector<cv::Mat> layers = row[m_fileColumns.m_processingLayers];
                         m_previewPane->feature_scale(CV_PRESCALING);
@@ -161,9 +181,9 @@ namespace ui {
 
                     if (row[m_fileColumns.m_autoCrop]) {
                         m_previewPane->set_features(features);
-                        m_previewPane->set_show_features(true);
+                        m_previewPane->show_crop(true);
                     } else {
-                        m_previewPane->set_show_features(false);
+                        m_previewPane->show_crop(false);
                     }
 
                     m_previewPane->queue_draw();

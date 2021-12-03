@@ -27,6 +27,7 @@ namespace ui {
             void selected_output_directory(int id);
 
             void change_layer();
+            void overlay_toggled();
 
             void selection_changed(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*);
             void update_preview();
@@ -67,6 +68,8 @@ namespace ui {
             Gtk::Button* m_exportDirButton;
             Gtk::Button* m_exportButton;
             Gtk::SpinButton* m_layerButton;
+            Gtk::CheckButton* m_showFeaturesChk;
+            Gtk::CheckButton* m_showFitnessChk;
 
             Gtk::TreeView* m_fileTreeView;
             Glib::RefPtr<Gtk::ListStore> m_fileListStore;

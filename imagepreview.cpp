@@ -7,6 +7,7 @@ namespace ui {
     ImagePreview::ImagePreview(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>& ref_builder)
         : Gtk::DrawingArea(cobject) {
         m_showFeatures = false;
+        m_showFitness = false;
         m_showCrop = true;
 
         set_draw_func(sigc::mem_fun(*this, &ImagePreview::on_draw));
@@ -34,24 +35,32 @@ namespace ui {
                                                       rgb.step);
     }
 
-    void ImagePreview::set_show_crop(bool show_crop) {
-        m_showCrop = show_crop;
+    void ImagePreview::set_image(img::Image& image) {
+        m_imageBuffer = image.pixbuf();
     }
 
     void ImagePreview::set_crop(const util::Box& crop) {
         m_crop = crop;
     }
 
-    void ImagePreview::set_show_features(bool show_features) {
-        m_showFeatures = show_features;
+    void ImagePreview::feature_scale(float scale) {
+        m_featureScale = scale;
+    }
+
+    void ImagePreview::show_crop(bool show_crop) {
+        m_showCrop = show_crop;
+    }
+
+    void ImagePreview::show_features(bool show) {
+        m_showFeatures = show;
+    }
+
+    void ImagePreview::show_fitness(bool show) {
+        m_showFitness = show;
     }
 
     void ImagePreview::set_features(const std::vector<std::pair<double, util::Box>>& boxes) {
         m_features = boxes;
-    }
-
-    void ImagePreview::feature_scale(float scale) {
-        m_featureScale = scale;
     }
 
     void ImagePreview::on_draw(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
@@ -101,13 +110,15 @@ namespace ui {
 
             cr->stroke();
 
-            // Render the fitness score
-            cr->set_source_rgb(1.0, 1.0, 1.0);
-            cr->move_to(feature.second.top_left().x,
-                        feature.second.top_left().y);
-            cr->set_font_size(48);
-            cr->show_text(std::to_string(feature.first));
-            cr->stroke();
+            if (m_showFitness) {
+                // Render the fitness score
+                cr->set_source_rgb(1.0, 1.0, 1.0);
+                cr->move_to(feature.second.top_left().x,
+                            feature.second.top_left().y);
+                cr->set_font_size(48);
+                cr->show_text(std::to_string(feature.first));
+                cr->stroke();
+            }
         }
 
     }
