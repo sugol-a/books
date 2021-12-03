@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include <gtkmm.h>
 
 #include <featuredetector.hpp>
@@ -7,6 +9,7 @@
 #include <croppreview.hpp>
 #include <imageloader.hpp>
 #include <imagepreview.hpp>
+#include <progresswindow.hpp>
 
 namespace ui {
     class MainWindow : public Gtk::ApplicationWindow {
@@ -25,6 +28,9 @@ namespace ui {
             void change_output_directory();
             void selected_input_directory(int id);
             void selected_output_directory(int id);
+
+            void start_list_store_worker();
+            bool update_worker_progress();
 
             void change_layer();
             void overlay_toggled();
@@ -75,6 +81,10 @@ namespace ui {
             Glib::RefPtr<Gtk::ListStore> m_fileListStore;
             ImageModelColumns m_fileColumns;
             Gtk::TreeView::Column m_outputFileColumn;
+
+            std::future<Glib::RefPtr<Gtk::ListStore>> m_listStoreFuture;
+            std::atomic_int m_listStoreProgress;
+            ui::ProgressWindow* m_progressWindow;
 
             ui::ImagePreview* m_previewPane;
             int m_viewLayer;

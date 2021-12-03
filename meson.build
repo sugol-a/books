@@ -21,6 +21,7 @@ ui_res = gnome.compile_resources(
 
 sources = [ 'books.cpp',
             'mainwindow.cpp',
+            'progresswindow.cpp',
             'imagepreview.cpp',
             'image.cpp',
             'imagestore.cpp',

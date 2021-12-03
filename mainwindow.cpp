@@ -25,8 +25,8 @@ namespace ui {
         m_showFeaturesChk->signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
         m_showFitnessChk->signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
 
-        m_fileListStore = Gtk::ListStore::create(m_fileColumns);
-        m_fileTreeView->set_model(m_fileListStore);
+        // m_fileListStore = Gtk::ListStore::create(m_fileColumns);
+        // m_fileTreeView->set_model(m_fileListStore);
         m_fileTreeView->append_column("File", m_fileColumns.m_inputName);
         m_fileTreeView->append_column_editable("Output", m_fileColumns.m_outputName);
         m_fileTreeView->append_column_editable("Autocrop", m_fileColumns.m_autoCrop);
@@ -86,30 +86,33 @@ namespace ui {
         m_imageStore.populate(directory);
         m_imageDirButton->set_label(directory);
 
-        for (auto& f : m_imageStore.images()) {
-            img::Image img(f);
-            auto row = *(m_fileListStore->append());
+        // for (auto& f : m_imageStore.images()) {
+        //     img::Image img(f);
+        //     auto row = *(m_fileListStore->append());
 
-            std::filesystem::path image_path = f;
-            row[m_fileColumns.m_inputName] = image_path.filename().string();
-            row[m_fileColumns.m_outputName] = image_path.filename().string();
-            row[m_fileColumns.m_autoCrop] = true;
-            row[m_fileColumns.m_fullPath] = f;
-            row[m_fileColumns.m_features] =
-                m_featureDetector.find_candidate_features(img.mat(),
-                                                          {
-                                                              ft::distance_to(util::Point<double>{0, 0}),
-                                                              ft::relative_area(0.5)
-                                                          },
-                                                          {
-                                                              2,
-                                                              5
-                                                          }, CV_PRESCALING);
-            row[m_fileColumns.m_processingLayers] = m_featureDetector.filter_chain()->cached();
-        }
+        //     std::filesystem::path image_path = f;
+        //     row[m_fileColumns.m_inputName] = image_path.filename().string();
+        //     row[m_fileColumns.m_outputName] = image_path.filename().string();
+        //     row[m_fileColumns.m_autoCrop] = true;
+        //     row[m_fileColumns.m_fullPath] = f;
+        //     row[m_fileColumns.m_features] =
+        //         m_featureDetector.find_candidate_features(img.mat(),
+        //                                                   {
+        //                                                       ft::distance_to(util::Point<double>{0, 0}),
+        //                                                       ft::relative_area(0.5)
+        //                                                   },
+        //                                                   {
+        //                                                       2,
+        //                                                       5
+        //                                                   }, CV_PRESCALING);
+        //     row[m_fileColumns.m_processingLayers] = m_featureDetector.filter_chain()->cached();
+        // }
+        //
 
         m_fileChooserSignal.disconnect();
         delete m_fileChooser;
+
+        start_list_store_worker();
     }
 
     void MainWindow::selected_output_directory(int id) {
@@ -123,6 +126,70 @@ namespace ui {
 
         m_fileChooserSignal.disconnect();
         delete m_fileChooser;
+    }
+
+    void MainWindow::start_list_store_worker() {
+        m_listStoreProgress = 0;
+
+        m_listStoreFuture = std::async(std::launch::async, [](img::ImageStore store,
+                                                              ft::FeatureDetector feature_detector,
+                                                              std::atomic_int* progress) {
+            ImageModelColumns model_cols;
+            Glib::RefPtr<Gtk::ListStore> list_store = Gtk::ListStore::create(model_cols);
+
+            for (auto& f : store.images()) {
+                std::cout << f << std::endl;
+                img::Image img(f);
+                auto row = *(list_store->append());
+
+                std::filesystem::path image_path = f;
+                row[model_cols.m_inputName] = image_path.filename().string();
+                row[model_cols.m_outputName] = image_path.filename().string();
+                row[model_cols.m_autoCrop] = true;
+                row[model_cols.m_fullPath] = f;
+                row[model_cols.m_features] =
+                    feature_detector.find_candidate_features(img.mat(),
+                                                             {
+                                                                 ft::distance_to(util::Point<double>{0, 0}),
+                                                                 ft::relative_area(0.5)
+                                                             },
+                                                             {
+                                                                 2,
+                                                                 5
+                                                             }, CV_PRESCALING);
+                row[model_cols.m_processingLayers] = feature_detector.filter_chain()->cached();
+                (*progress)++;
+            }
+
+            return list_store;
+        }, m_imageStore, m_featureDetector, &m_listStoreProgress);
+
+        // Create and display a modal progress window
+        m_progressWindow = ProgressWindow::create();
+        m_progressWindow->set_jobs(m_imageStore.images().size());
+        m_progressWindow->set_modal(true);
+        m_progressWindow->set_transient_for(*this);
+        Glib::signal_idle().connect(sigc::mem_fun(*this, &MainWindow::update_worker_progress));
+
+        m_progressWindow->show();
+    }
+
+    bool MainWindow::update_worker_progress() {
+        m_progressWindow->set_progress(m_listStoreProgress);
+
+        // Check if the worker's finished
+        if (m_listStoreProgress == m_imageStore.images().size()) {
+            delete m_progressWindow;
+
+            // Add the new liststore
+            m_fileListStore = m_listStoreFuture.get();
+            m_fileTreeView->set_model(m_fileListStore);
+
+            // Stop receiving idle updates
+            return false;
+        }
+
+        return true;
     }
 
     void MainWindow::change_layer() {
@@ -143,6 +210,7 @@ namespace ui {
         }
 
         m_previewPane->show_fitness(m_showFitnessChk->get_active());
+
         update_preview();
     }
 
