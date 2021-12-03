@@ -19,7 +19,7 @@ namespace img {
 
         for (const auto& entry : std::filesystem::directory_iterator(path)) {
             // Check that this entry has an allowed extension, and is actually a file
-            if (extension_filter.find(entry.path().extension()) != extension_filter.end()
+            if (extension_filter.find(entry.path().extension().string()) != extension_filter.end()
                 && entry.is_regular_file()) {
                 m_images.push_back(entry.path().string());
             }
