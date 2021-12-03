@@ -20,10 +20,7 @@ ui_res = gnome.compile_resources(
   c_name: 'ui_res')
 
 sources = [ 'books.cpp',
-            #'crop.cpp',
-            'imageloader.cpp',
             'mainwindow.cpp',
-            'croppreview.cpp',
             'imagepreview.cpp',
             'image.cpp',
             'imagestore.cpp',
