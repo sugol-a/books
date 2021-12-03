@@ -16,7 +16,7 @@ namespace img {
     Glib::RefPtr<Gdk::Pixbuf> Image::pixbuf() {
         if (!m_pixbuf) {
             m_pixbuf = Gdk::Pixbuf::create_from_file(m_filename);
-            //m_pixbuf = m_pixbuf->apply_embedded_orientation();
+            m_pixbuf = m_pixbuf->apply_embedded_orientation();
         }
 
         return m_pixbuf;
