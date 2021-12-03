@@ -40,11 +40,30 @@ namespace ft {
         // TODO Make eps parameter configurable
         cv::groupRectangles(bounding_boxes, 0, 20);
 
-        // Calculate the fitness for each feature
         std::vector<std::pair<double, util::Box>> features;
+
+        // Store the min/max fitness values for normalisation
+        double fitness_min = INFINITY;
+        double fitness_max = -INFINITY;
+        // Calculate the fitness for each feature
         for (const auto& box : bounding_boxes) {
             double fitness = calculate_fitness(image, box, fitness_metrics, metric_weights);
+            if (fitness < fitness_min) {
+                fitness_min = fitness;
+            }
+
+            if (fitness > fitness_max) {
+                fitness_max = fitness;
+            }
+
             features.push_back(std::pair<double, util::Box>(fitness, box));
+        }
+
+        // Normalise the fitness values
+        double fitness_range = fitness_max - fitness_min;
+        for (auto& feature : features) {
+            feature.first -= fitness_min;
+            feature.first /= fitness_range;
         }
 
         return features;
@@ -63,9 +82,8 @@ namespace ft {
             weighted_sum += weight * metric(image, box);
         }
 
-        // Use the sigmoid function to map to the range (0, 1). Since a larger
-        // weighted sum indicates low fitness, pass in -weighted_sum
-        return sigmoid(-weighted_sum);
+        // A greater weighted sum indicates lower fitness, so give -weighted_sum
+        return -weighted_sum;
     }
 
     util::Box FeatureDetector::best_candidate(std::vector<std::pair<double, util::Box>> const& features) {

@@ -12,10 +12,6 @@ namespace ft {
         return ((value / from_range) * to_range) + to_min;
     }
 
-    double sigmoid(double x) {
-        return 1.0 / (1.0 + exp(-x));
-    }
-
     FitnessMetric aspect_ratio(double aspect) {
         // Returns the absolute difference between the ideal aspect ratio and
         // the actual aspect ratio of the bouding box
