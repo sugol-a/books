@@ -72,7 +72,7 @@ namespace worker {
              *         popping
              */
             std::shared_ptr<T> pop() {
-                std::unique_lock<std::mutex> lock(m_mutex);
+                std::unique_lock lock(m_mutex);
 
                 // Wait for data to appear on the queue, or for the queue to close
                 m_cv.wait(lock, [this]{ return m_queue.size() > 0 || m_closed; });
@@ -117,6 +117,16 @@ namespace worker {
             bool empty() {
                 std::lock_guard lock(m_mutex);
                 return m_queue.empty();
+            }
+
+            /**
+             * Get the number of items in the queue
+             *
+             * @return Number of items in the queue
+             */
+            size_t size() {
+                std::lock_guard lock(m_mutex);
+                return m_queue.size();
             }
 
         private:
