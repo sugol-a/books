@@ -11,6 +11,8 @@
 namespace img {
     class ImageData {
         public:
+            using Feature = std::pair<float, util::Box>;
+
             /**
              * Constructs a new empty ImageData. A file can be loaded
              * later using ImageData::load(filename).
@@ -66,19 +68,19 @@ namespace img {
              *
              * @param features Vector containing the image bounding boxes
              */
-            void set_features(const std::vector<util::Box>& features);
+            void set_features(const std::vector<Feature>& features);
 
             /**
              * Returns a const reference to the image features
              *
              * @return Vector of feature bounding boxes
              */
-            const std::vector<util::Box>& features() const;
+            const std::vector<Feature>& features() const;
 
         private:
             cv::Mat m_mat;
             Glib::RefPtr<Gdk::Pixbuf> m_pixbuf;
-            std::vector<util::Box> m_features;
-            util::Box* m_candidate_box;
+            std::vector<Feature> m_features;
+            Feature* m_candidate_box;
     };
 }

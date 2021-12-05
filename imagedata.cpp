@@ -40,11 +40,11 @@ namespace img {
         return pixbuf();
     }
 
-    void ImageData::set_features(const std::vector<util::Box>& features) {
+    void ImageData::set_features(const std::vector<ImageData::Feature>& features) {
         m_features = features;
     }
 
-    const std::vector<util::Box>& ImageData::features() const {
+    const std::vector<ImageData::Feature>& ImageData::features() const {
         return m_features;
     }
 }
