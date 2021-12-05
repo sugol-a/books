@@ -1,26 +1,14 @@
 #pragma once
 
-#include <vector>
-#include <memory>
-#include <filesystem>
+#include <imagedata.hpp>
+#include <worker.hpp>
 
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
+namespace worker {
+    class ImageLoader : public Worker<std::string, img::ImageData> {
+        public:
+            ImageLoader(std::shared_ptr<InputQueue> input_queue,
+                        std::shared_ptr<OutputQueue> output_queue);
 
-using CVImage = cv::Mat;
-
-class Image {
-public:
-    std::filesystem::path filename;
-    std::unique_ptr<CVImage> image;
-
-    Image();
-    Image(const Image& other);
-    void load();
-};
-
-class ImageLoader {
-public:
-    Image get_single(const std::string& filename);
-    std::vector<Image> get_many(const std::string& directory);
-};
+            void run() override;
+    };
+}
