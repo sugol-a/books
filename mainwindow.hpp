@@ -90,9 +90,6 @@ namespace ui {
             Gtk::TreeView::Column m_outputFileColumn;
             std::shared_ptr<img::ImageData> m_currentImage;
 
-            std::future<void> m_exportFuture;
-            std::atomic_int m_exportProgress;
-
             ui::ProgressWindow* m_progressWindow;
 
             ui::ImagePreview* m_previewPane;
