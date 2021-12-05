@@ -17,24 +17,18 @@ namespace filter {
         m_filters.emplace_back(new CannyFilter);
     }
 
-    cv::Mat FilterChain::apply_filters(cv::Mat& img) {
-        // Clear the previous results
-        m_cache.clear();
+    FilterChain::~FilterChain() {
+        for (auto filter : m_filters){
+            delete filter;
+        }
+    }
 
+    cv::Mat FilterChain::apply_filters(const cv::Mat& img) {
         cv::Mat filter_result = img;
         for (auto& filter : m_filters) {
             filter_result = filter->apply(filter_result);
-            m_cache.push_back(filter_result);
         }
 
         return filter_result;
-    }
-
-    std::vector<cv::Mat> FilterChain::cached() {
-        return m_cache;
-    }
-
-    size_t FilterChain::length() const {
-        return m_filters.size();
     }
 }
