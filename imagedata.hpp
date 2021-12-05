@@ -34,6 +34,12 @@ namespace img {
             void load(std::string filename);
 
             /**
+             * Unloads the image data from memory
+             *
+             */
+            void unload();
+
+            /**
              * Returns an immutable reference to the internal cv::Mat containing
              * the image data
              *
@@ -75,12 +81,29 @@ namespace img {
              *
              * @return Vector of feature bounding boxes
              */
-            const std::vector<Feature>& features() const;
+            std::vector<Feature>& features();
+
+            /**
+             * Sets the candidate crop rectangle. `candidate` should be a pointer to a member of `m_features`
+             *
+             * @param candidate Pointer to the candidate crop rectangle
+             */
+            void set_candidate(Feature candidate);
+
+            /**
+             * Returns a const reference to the candidate crop rectangle
+             *
+             * @return Reference to the candidate crop rectangle
+             */
+            Feature& candidate();
+
+            const std::string& filename() const;
 
         private:
             cv::Mat m_mat;
+            std::string m_filename;
             Glib::RefPtr<Gdk::Pixbuf> m_pixbuf;
             std::vector<Feature> m_features;
-            Feature* m_candidate_box;
+            Feature m_candidate_box;
     };
 }

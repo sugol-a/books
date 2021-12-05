@@ -4,11 +4,13 @@ namespace img {
     ImageData::ImageData() {
     }
 
-    ImageData::ImageData(std::string filename) {
-        load(filename);
+    ImageData::ImageData(std::string filename)
+    : m_filename(filename) {
+        load(m_filename);
     }
 
     void ImageData::load(std::string filename) {
+        m_filename = filename;
         m_mat = cv::imread(filename);
 
         // Convert the mat to RGB, this will simplify the conversion to a pixbuf
@@ -22,6 +24,11 @@ namespace img {
                                                  m_mat.size().width,
                                                  m_mat.size().height,
                                                  m_mat.step);
+    }
+
+    void ImageData::unload() {
+        m_mat = cv::Mat();
+        m_pixbuf = nullptr;
     }
 
     const cv::Mat& ImageData::mat() const {
@@ -44,7 +51,19 @@ namespace img {
         m_features = features;
     }
 
-    const std::vector<ImageData::Feature>& ImageData::features() const {
+    std::vector<ImageData::Feature>& ImageData::features() {
         return m_features;
+    }
+
+    void ImageData::set_candidate(Feature candidate) {
+        m_candidate_box = candidate;
+    }
+
+    ImageData::Feature& ImageData::candidate() {
+        return m_candidate_box;
+    }
+
+    const std::string& ImageData::filename() const {
+        return m_filename;
     }
 }
