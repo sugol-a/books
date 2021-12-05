@@ -1,6 +1,6 @@
 project('books', 'cpp',
         version : '0.1',
-        default_options : ['warning_level=3', 'cpp_std=c++17'])
+        default_options : ['warning_level=3', 'cpp_std=c++17', 'c_std=c11'])
 
 deps = [
   dependency('opencv4'),
@@ -23,9 +23,13 @@ sources = [ 'books.cpp',
             'mainwindow.cpp',
             'progresswindow.cpp',
             'imagepreview.cpp',
+            'imageloader.cpp',
+            'imageloaderpool.cpp',
+            'imagedata.cpp',
             'image.cpp',
             'imagestore.cpp',
             'featuredetector.cpp',
+            'featuredetectorpool.cpp',
             'fitnessmetrics.cpp',
             'filter/filter.cpp',
             'filter/filterchain.cpp',
@@ -42,4 +46,4 @@ executable('books',
            sources,
            install : true,
            dependencies: deps,
-	       include_directories: inc)
+	         include_directories: inc)
