@@ -173,7 +173,6 @@ namespace ui {
     }
 
     void MainWindow::start_export_worker() {
-        m_exportProgress = 0;
     }
 
     bool MainWindow::update_export_worker_progress() {
