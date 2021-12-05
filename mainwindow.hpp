@@ -1,13 +1,15 @@
 #pragma once
 
 #include <atomic>
+#include <filesystem>
 
 #include <gtkmm.h>
 
-#include <featuredetector.hpp>
+// #include <featuredetector.hpp>
 #include <imagestore.hpp>
-#include <croppreview.hpp>
-#include <imageloader.hpp>
+// #include <imageloader.hpp>
+#include <imageloaderpool.hpp>
+#include <featuredetectorpool.hpp>
 #include <imagepreview.hpp>
 #include <progresswindow.hpp>
 
@@ -22,8 +24,6 @@ namespace ui {
             static MainWindow* create();
 
         private:
-            static constexpr float CV_PRESCALING = 0.1;
-
             void change_input_directory();
             void change_output_directory();
             void selected_input_directory(int id);
@@ -31,8 +31,11 @@ namespace ui {
 
             void margins_changed();
 
-            void start_list_store_worker();
-            bool update_worker_progress();
+            void begin_import();
+            bool import_progress();
+
+            void start_export_worker();
+            bool update_export_worker_progress();
 
             void change_layer();
             void overlay_toggled();
@@ -50,20 +53,21 @@ namespace ui {
                         add(m_outputName);
                         add(m_autoCrop);
                         add(m_fullPath);
-                        add(m_features);
-                        add(m_processingLayers);
+                        add(m_imageData);
                     }
 
                     Gtk::TreeModelColumn<Glib::ustring> m_inputName;
                     Gtk::TreeModelColumn<Glib::ustring> m_outputName;
                     Gtk::TreeModelColumn<bool> m_autoCrop;
                     Gtk::TreeModelColumn<Glib::ustring> m_fullPath;
-                    Gtk::TreeModelColumn<std::vector<std::pair<double,util::Box>>> m_features;
-                    Gtk::TreeModelColumn<std::vector<cv::Mat>> m_processingLayers;
+                    Gtk::TreeModelColumn<std::shared_ptr<img::ImageData>> m_imageData;
             };
 
             img::ImageStore m_imageStore;
-            ft::FeatureDetector m_featureDetector;
+
+            filter::FilterChain m_filterChain;
+            worker::ImageLoaderPool m_imageLoader;
+            worker::FeatureDetectorPool m_featureDetector;
 
             std::filesystem::path m_exportDirectory;
 
@@ -84,12 +88,13 @@ namespace ui {
             Glib::RefPtr<Gtk::ListStore> m_fileListStore;
             ImageModelColumns m_fileColumns;
             Gtk::TreeView::Column m_outputFileColumn;
+            std::shared_ptr<img::ImageData> m_currentImage;
 
-            std::future<Glib::RefPtr<Gtk::ListStore>> m_listStoreFuture;
-            std::atomic_int m_listStoreProgress;
+            std::future<void> m_exportFuture;
+            std::atomic_int m_exportProgress;
+
             ui::ProgressWindow* m_progressWindow;
 
             ui::ImagePreview* m_previewPane;
-            int m_viewLayer;
     };
 }

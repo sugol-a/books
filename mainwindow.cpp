@@ -17,7 +17,6 @@ namespace ui {
         m_showFitnessChk = ref_builder->get_widget<Gtk::CheckButton>("chkShowFitness");
         m_fileTreeView = ref_builder->get_widget<Gtk::TreeView>("filesTreeView");
         m_previewPane = Gtk::Builder::get_widget_derived<ui::ImagePreview>(ref_builder, "preview");
-        // m_previewPane = Gtk::Builder::get_widget_derived<ui::CropPreview>(ref_builder, "preview");
 
         m_imageDirButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::change_input_directory));
         m_exportDirButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::change_output_directory));
@@ -41,7 +40,18 @@ namespace ui {
                                                      Gtk::ButtonsType::OK,
                                                      true);
 
-        m_viewLayer = -1;
+        m_imageLoader = worker::ImageLoaderPool(1);
+        m_featureDetector = worker::FeatureDetectorPool(1, m_filterChain, {
+                ft::distance_to(util::Point<double>{0, 0}),
+                ft::relative_area(0.5)
+            },
+            {
+                2,
+                5
+            });
+
+        // Link the image loader and feature detector pools
+        m_featureDetector.set_input(m_imageLoader.output());
     }
 
     MainWindow::~MainWindow() {
@@ -91,7 +101,7 @@ namespace ui {
         m_fileChooserSignal.disconnect();
         delete m_fileChooser;
 
-        start_list_store_worker();
+        begin_import();
     }
 
     void MainWindow::selected_output_directory(int id) {
@@ -108,65 +118,52 @@ namespace ui {
     }
 
     void MainWindow::margins_changed() {
-        update_preview();
+        m_previewPane->queue_draw();
     }
 
-    void MainWindow::start_list_store_worker() {
-        m_listStoreProgress = 0;
-
-        m_listStoreFuture = std::async(std::launch::async, [](img::ImageStore store,
-                                                              ft::FeatureDetector feature_detector,
-                                                              std::atomic_int* progress) {
-            ImageModelColumns model_cols;
-            Glib::RefPtr<Gtk::ListStore> list_store = Gtk::ListStore::create(model_cols);
-
-            for (auto& f : store.images()) {
-                std::cout << f << std::endl;
-                img::Image img(f);
-                auto row = *(list_store->append());
-
-                std::filesystem::path image_path = f;
-                row[model_cols.m_inputName] = image_path.filename().string();
-                row[model_cols.m_outputName] = image_path.filename().string();
-                row[model_cols.m_autoCrop] = true;
-                row[model_cols.m_fullPath] = f;
-                row[model_cols.m_features] =
-                    feature_detector.find_candidate_features(img.mat(),
-                                                             {
-                                                                 ft::distance_to(util::Point<double>{0, 0}),
-                                                                 ft::relative_area(0.5)
-                                                             },
-                                                             {
-                                                                 2,
-                                                                 5
-                                                             }, CV_PRESCALING);
-                row[model_cols.m_processingLayers] = feature_detector.filter_chain()->cached();
-                (*progress)++;
-            }
-
-            return list_store;
-        }, m_imageStore, m_featureDetector, &m_listStoreProgress);
+    void MainWindow::begin_import() {
+        m_imageLoader.input()->push(m_imageStore.images());
+        m_imageLoader.input()->close();
+        m_imageLoader.run_workers();
+        m_featureDetector.run_workers();
 
         // Create and display a modal progress window
         m_progressWindow = ProgressWindow::create();
         m_progressWindow->set_jobs(m_imageStore.images().size());
         m_progressWindow->set_modal(true);
         m_progressWindow->set_transient_for(*this);
-        Glib::signal_idle().connect(sigc::mem_fun(*this, &MainWindow::update_worker_progress));
+        Glib::signal_idle().connect(sigc::mem_fun(*this, &MainWindow::import_progress));
 
         m_progressWindow->show();
     }
 
-    bool MainWindow::update_worker_progress() {
-        m_progressWindow->set_progress(m_listStoreProgress);
+    bool MainWindow::import_progress() {
+        m_progressWindow->set_progress(m_featureDetector.output()->size());
 
         // Check if the worker's finished
-        if (m_listStoreProgress == m_imageStore.images().size()) {
+        if (m_featureDetector.output()->closed() && m_featureDetector.output()->size() == m_imageStore.images().size()) {
+            m_progressWindow->close();
             delete m_progressWindow;
 
             // Add the new liststore
-            m_fileListStore = m_listStoreFuture.get();
+            m_fileListStore = Gtk::ListStore::create(m_fileColumns);
+
+            std::shared_ptr<img::ImageData> image_data = nullptr;
+            while ((image_data = m_featureDetector.output()->pop()) != nullptr) {
+                std::filesystem::path file_path(image_data->filename());
+                auto row = *(m_fileListStore->append());
+
+                row[m_fileColumns.m_inputName] = file_path.filename().string();
+                row[m_fileColumns.m_outputName] = file_path.filename().string();
+                row[m_fileColumns.m_autoCrop] = true;
+                row[m_fileColumns.m_fullPath] = image_data->filename();
+                row[m_fileColumns.m_imageData] = image_data;
+            }
+
             m_fileTreeView->set_model(m_fileListStore);
+
+            m_imageLoader.join_all();
+            m_featureDetector.join_all();
 
             // Stop receiving idle updates
             return false;
@@ -175,8 +172,15 @@ namespace ui {
         return true;
     }
 
+    void MainWindow::start_export_worker() {
+        m_exportProgress = 0;
+    }
+
+    bool MainWindow::update_export_worker_progress() {
+
+    }
+
     void MainWindow::change_layer() {
-        m_viewLayer = m_layerButton->get_value_as_int();
         update_preview();
     }
 
@@ -193,11 +197,11 @@ namespace ui {
         }
 
         m_previewPane->show_fitness(m_showFitnessChk->get_active());
-
-        update_preview();
+        m_previewPane->queue_draw();
     }
 
     void MainWindow::selection_changed(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*) {
+
         update_preview();
     }
 
@@ -205,47 +209,22 @@ namespace ui {
         // Get the currently selected row
         auto selection = m_fileTreeView->get_selection();
         auto selected = selection->get_selected();
+        auto row = *selected;
 
-        if (selected) {
-            auto row = *selected;
-            Glib::ustring row_value = row[m_fileColumns.m_fullPath];
+        if (!row)
+            return;
 
-            // Search for the selected image
-            for (const std::string& filename : m_imageStore.images()) {
-                if (filename == std::string(row_value)) {
-                    img::Image img(filename);
-                    std::vector<std::pair<double, util::Box>> features = row[m_fileColumns.m_features];
-                    util::Box crop = m_featureDetector.best_candidate(features);
-
-                    // Expand the crop box to include margins
-                    crop.expand(m_marginScale->get_value(),
-                                util::Box(0, 0, img.pixbuf()->get_width(), img.pixbuf()->get_height()));
-
-                    m_previewPane->set_crop(crop);
-                    if (m_viewLayer == -1) {
-                        m_previewPane->feature_scale(1);
-                        m_previewPane->set_image(img);
-                    } else {
-                        std::vector<cv::Mat> layers = row[m_fileColumns.m_processingLayers];
-                        m_previewPane->feature_scale(CV_PRESCALING);
-
-                        if (m_viewLayer < layers.size()) {
-                            m_previewPane->set_image(layers[m_viewLayer]);
-                        }
-                    }
-
-                    if (row[m_fileColumns.m_autoCrop]) {
-                        m_previewPane->set_features(features);
-                        m_previewPane->show_crop(true);
-                    } else {
-                        m_previewPane->show_crop(false);
-                    }
-
-                    m_previewPane->queue_draw();
-                    break;
-                }
-            }
+        // Unload the currently loaded image
+        if (m_currentImage) {
+            m_currentImage->unload();
         }
+
+        // Load the new image
+        m_currentImage = row.get_value(m_fileColumns.m_imageData);
+        m_currentImage->load(m_currentImage->filename());
+
+        m_previewPane->set_image(m_currentImage);
+        m_previewPane->queue_draw();
     }
 
     void MainWindow::do_export() {
@@ -256,30 +235,34 @@ namespace ui {
         }
 
         auto iter = m_fileListStore->children();
-        for (size_t i = 0; i < m_imageStore.images().size(); i++) {
-            auto row = iter[i];
+        std::cout << iter.size() << std::endl;
+        for (auto& row : iter) {
             Glib::ustring input_filename = row[m_fileColumns.m_fullPath];
             Glib::ustring output_filename = row[m_fileColumns.m_outputName];
             bool do_crop = row[m_fileColumns.m_autoCrop];
+            std::shared_ptr<img::ImageData> image_data = row[m_fileColumns.m_imageData];
 
-            std::string image_filename = m_imageStore.images()[i];
-            img::Image img(image_filename);
+            image_data->load(image_data->filename());
+            util::Box crop = image_data->candidate().second;
 
             cv::Mat output_image;
-            util::Box crop = m_featureDetector.best_candidate(row[m_fileColumns.m_features]);
-
             if (do_crop && crop.area() > 0) {
-                crop.expand(m_marginScale->get_value(),
-                            util::Box(0, 0, img.mat().size().width, img.mat().size().height));
-                output_image = img.mat()(crop);
+                // crop.expand(m_marginScale->get_value(),
+                //             util::Box(0, 0, img.mat().size().width, img.mat().size().height));
+                output_image = image_data->mat()(crop);
             } else {
-                output_image = img.mat();
+                output_image = image_data->mat();
             }
 
             std::filesystem::path full_output_path = m_exportDirectory.string() + "/" + std::string(output_filename);
+
+            // ImageData stores its cv::Mat as RGB data, but imwrite expects BGR
+            cv::cvtColor(output_image, output_image, cv::COLOR_RGB2BGR);
+
             cv::imwrite(full_output_path.string(), output_image);
 
-            std::cout << input_filename << " -> " << output_filename << ", " << do_crop << std::endl;
+            image_data->unload();
+            // std::cout << input_filename << " -> " << output_filename << ", " << do_crop << std::endl;
         }
     }
 }
