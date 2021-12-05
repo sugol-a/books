@@ -15,7 +15,7 @@ namespace worker {
             /**
              * Constructs a new empty work queue
              */
-            WorkQueue() : m_closed(false) { }
+            WorkQueue() { }
 
             /**
              * Pushes a resource to the internal queue. Uses a mutex internally
@@ -31,17 +31,13 @@ namespace worker {
                 m_cv.notify_one();
             }
 
-            void push(const T& data) {
-                push(std::make_shared<T>(data));
-            }
-
             /**
              * Pushes a vector of resources to the internal queue. Uses a mutex
              * in order to guarantee exclusive access to the queue
              *
              * @param data Vector of resources to push to the queue
              */
-            void push(std::vector<std::shared_ptr<T>> data) {
+            void push_vec(std::vector<std::shared_ptr<T>> data) {
                 std::unique_lock lock(m_mutex);
 
                 for (auto& value : data) {
@@ -52,7 +48,7 @@ namespace worker {
                 m_cv.notify_all();
             }
 
-            void push(const std::vector<T>& data) {
+            void push_vec(const std::vector<T>& data) {
                 std::unique_lock lock(m_mutex);
 
                 for (const T& value : data) {
@@ -75,13 +71,7 @@ namespace worker {
                 std::unique_lock lock(m_mutex);
 
                 // Wait for data to appear on the queue, or for the queue to close
-                m_cv.wait(lock, [this]{ return m_queue.size() > 0 || m_closed; });
-
-                // If the queue's been closed we still need to flush out the
-                // jobs, so only stop popping data when there's nothing left on the queue
-                if (m_closed && m_queue.empty()) {
-                    return nullptr;
-                }
+                m_cv.wait(lock, [this]{ return m_queue.size() > 0; });
 
                 std::shared_ptr<T> data = m_queue.front();
                 m_queue.pop();
@@ -93,22 +83,10 @@ namespace worker {
             }
 
             /**
-             * Closes the queue for reading and writing. This signals to the
-             * worker threads that there is no more work, and that they should
-             * terminate.
+             * Signal to workers that there is no more data to process
              */
-            void close() {
-                m_closed = true;
-                m_cv.notify_all();
-            }
-
-            /**
-             * Check whether the queue has been closed
-             *
-             * @return true if the queue has been closed, false otherwise
-             */
-            bool closed() {
-                return m_closed;
+            void finish() {
+                push(nullptr);
             }
 
             /**
@@ -134,7 +112,6 @@ namespace worker {
         private:
             std::mutex m_mutex;
             std::queue<std::shared_ptr<T>> m_queue;
-            std::atomic_bool m_closed;
             std::condition_variable m_cv;
     };
 }

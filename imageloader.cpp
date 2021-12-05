@@ -16,8 +16,11 @@ namespace worker {
                 m_output_queue->push(std::move(image));
             }
 
-            if (m_input_queue->empty())
-                m_output_queue->close();
+            // Signal other producers to terminate
+            m_input_queue->push(nullptr);
+
+            // Signal the consumers to terminate
+            m_output_queue->push(nullptr);
         };
 
         m_thread = std::thread(work_fn);
