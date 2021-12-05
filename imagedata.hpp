@@ -40,19 +40,19 @@ namespace img {
             void unload();
 
             /**
-             * Returns an immutable reference to the internal cv::Mat containing
+             * Returns a reference to the internal cv::Mat containing
              * the image data
              *
              * @return cv::Mat containing image data
              */
-            const cv::Mat& mat() const;
+            cv::Mat& mat();
 
             /**
              * Implicit conversion to a cv::Mat type
              *
              * @return cv::Mat containing image data
              */
-            operator const cv::Mat&() const;
+            operator cv::Mat&();
 
             /**
              * Gets a reference to the internal Gdk::Pixbuf containing the

@@ -31,11 +31,11 @@ namespace img {
         m_pixbuf = nullptr;
     }
 
-    const cv::Mat& ImageData::mat() const {
+    cv::Mat& ImageData::mat() {
         return m_mat;
     }
 
-    ImageData::operator const cv::Mat&() const {
+    ImageData::operator cv::Mat&() {
         return mat();
     }
 
