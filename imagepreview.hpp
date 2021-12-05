@@ -5,7 +5,7 @@
 #include <gtkmm.h>
 
 #include <util/box.hpp>
-#include <image.hpp>
+#include <imagedata.hpp>
 
 namespace ui {
     class ImagePreview : public Gtk::DrawingArea {
@@ -13,11 +13,7 @@ namespace ui {
             ImagePreview();
             ImagePreview(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>& ref_builder);
 
-            void set_image(const cv::Mat& image);
-            void set_image(img::Image& image);
-            void set_crop(const util::Box& crop);
-            void set_features(const std::vector<std::pair<double,util::Box>>& boxes);
-            void feature_scale(float scale);
+            void set_image(std::shared_ptr<img::ImageData> image);
 
             void show_crop(bool show);
             void show_features(bool show);
@@ -33,9 +29,6 @@ namespace ui {
             bool m_showCrop;
             bool m_showFeatures;
             bool m_showFitness;
-            float m_featureScale;
-            Glib::RefPtr<Gdk::Pixbuf> m_imageBuffer;
-            util::Box m_crop;
-            std::vector<std::pair<double, util::Box>> m_features;
+            std::shared_ptr<img::ImageData> m_imageData;
     };
 }
