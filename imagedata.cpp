@@ -16,14 +16,7 @@ namespace img {
         // Convert the mat to RGB, this will simplify the conversion to a pixbuf
         // (pixbufs only support RGB)
         cv::cvtColor(m_mat, m_mat, cv::COLOR_BGR2RGB);
-
-        m_pixbuf = Gdk::Pixbuf::create_from_data(m_mat.data,
-                                                 Gdk::Colorspace::RGB,
-                                                 false,
-                                                 8,
-                                                 m_mat.size().width,
-                                                 m_mat.size().height,
-                                                 m_mat.step);
+        update_pixbuf();
     }
 
     void ImageData::unload() {
@@ -31,11 +24,11 @@ namespace img {
         m_pixbuf = nullptr;
     }
 
-    cv::Mat& ImageData::mat() {
+    const cv::Mat& ImageData::mat() const {
         return m_mat;
     }
 
-    ImageData::operator cv::Mat&() {
+    ImageData::operator const cv::Mat&() const {
         return mat();
     }
 
@@ -65,5 +58,15 @@ namespace img {
 
     const std::string& ImageData::filename() const {
         return m_filename;
+    }
+
+    void ImageData::update_pixbuf() {
+        m_pixbuf = Gdk::Pixbuf::create_from_data(m_mat.data,
+                                                 Gdk::Colorspace::RGB,
+                                                 false,
+                                                 8,
+                                                 m_mat.size().width,
+                                                 m_mat.size().height,
+                                                 m_mat.step);
     }
 }

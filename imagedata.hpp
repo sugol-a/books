@@ -45,14 +45,14 @@ namespace img {
              *
              * @return cv::Mat containing image data
              */
-            cv::Mat& mat();
+            const cv::Mat& mat() const;
 
             /**
              * Implicit conversion to a cv::Mat type
              *
              * @return cv::Mat containing image data
              */
-            operator cv::Mat&();
+            operator const cv::Mat&() const;
 
             /**
              * Gets a reference to the internal Gdk::Pixbuf containing the
@@ -98,6 +98,9 @@ namespace img {
             Feature& candidate();
 
             const std::string& filename() const;
+
+        private:
+            void update_pixbuf();
 
         private:
             cv::Mat m_mat;
