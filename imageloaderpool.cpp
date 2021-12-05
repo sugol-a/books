@@ -19,6 +19,14 @@ namespace worker {
         return m_output_queue;
     }
 
+    void ImageLoaderPool::set_input(std::shared_ptr<InputQueue> in) {
+        m_input_queue = in;
+    }
+
+    void ImageLoaderPool::set_output(std::shared_ptr<OutputQueue> out) {
+        m_output_queue = out;
+    }
+
     void ImageLoaderPool::run_workers() {
         for (auto& worker : m_workers) {
             worker->run();

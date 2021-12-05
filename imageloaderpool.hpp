@@ -6,10 +6,13 @@
 namespace worker {
     class ImageLoaderPool : public WorkerPool<ImageLoader> {
         public:
+            ImageLoaderPool() { }
             ImageLoaderPool(size_t n_workers);
 
             std::shared_ptr<InputQueue> input() override;
             std::shared_ptr<OutputQueue> output() override;
+            void set_input(std::shared_ptr<InputQueue> in) override;
+            void set_output(std::shared_ptr<OutputQueue> out) override;
 
             void run_workers() override;
             void join_all() override;
