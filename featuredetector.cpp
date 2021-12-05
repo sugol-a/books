@@ -31,7 +31,8 @@ namespace worker {
                 m_output_queue->push(image_data);
             }
 
-            m_output_queue->close();
+            if (m_input_queue->empty())
+                m_output_queue->close();
         };
 
         m_thread = std::thread(work_fn);

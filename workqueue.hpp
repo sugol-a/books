@@ -87,6 +87,8 @@ namespace worker {
                 m_queue.pop();
                 lock.unlock();
 
+                m_cv.notify_one();
+
                 return data;
             }
 
