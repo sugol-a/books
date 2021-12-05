@@ -1,101 +1,107 @@
+#include <cmath>
 #include <opencv2/objdetect.hpp>
-
 #include <featuredetector.hpp>
 
-namespace ft {
-    FeatureDetector::FeatureDetector() {
-        m_filterChain = std::make_shared<filter::FilterChain>();
+namespace worker {
+    // TODO: Ensure that fitness_metrics and fitness_metric_weights have the
+    // same size
+    FeatureDetector::FeatureDetector(std::shared_ptr<InputQueue> input_queue,
+                                     std::shared_ptr<OutputQueue> output_queue,
+                                     const filter::FilterChain& filter_chain,
+                                     const std::vector<ft::FitnessMetric>& fitness_metrics,
+                                     const std::vector<float>& fitness_metric_weights)
+        : m_filter_chain(filter_chain),
+          m_fitness_metrics(fitness_metrics),
+          m_fitness_weights(fitness_metric_weights) {
+        set_input_queue(input_queue);
+        set_output_queue(output_queue);
     }
 
-    FeatureDetector::FeatureDetector(std::shared_ptr<filter::FilterChain> filter_chain)
-        : m_filterChain(filter_chain) {
+    void FeatureDetector::run() {
+        auto work_fn = [&] {
+            std::shared_ptr<img::ImageData> image_data = nullptr;
+
+            while ((image_data = m_input_queue->pop()) != nullptr) {
+                find_features(*image_data);
+
+                // We're done with the image data for now, we only need to
+                // reload it for display/export purposes
+                image_data->unload();
+
+                m_output_queue->push(image_data);
+            }
+
+            m_output_queue->close();
+        };
+
+        m_thread = std::thread(work_fn);
     }
 
-    std::vector<std::pair<double, util::Box>>
-    FeatureDetector::find_candidate_features(const cv::Mat& image,
-                                             const std::vector<FitnessMetric>& fitness_metrics,
-                                             const std::vector<double>& metric_weights,
-                                             double image_scale_factor)
-    {
-        // Scale the image down in order to decrease processing time
-        cv::Mat filtered = image;
-        cv::Size new_size = cv::Size(image.size().width * image_scale_factor, image.size().height * image_scale_factor);
-        cv::resize(image, filtered, new_size);
-        filtered = m_filterChain->apply_filters(filtered);
+    void FeatureDetector::find_features(img::ImageData& image_data) {
+        cv::Mat result;
+        double image_scale = resize_mat(image_data.mat(), result);
+        result = m_filter_chain.apply_filters(result);
 
         std::vector<std::vector<cv::Point>> contours;
-        cv::findContours(filtered, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
+        cv::findContours(result, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
 
         std::vector<cv::Rect> bounding_boxes;
         for (const auto& c : contours) {
-            // Since we scaled the image down, the bounding rects need to be
-            // scaled up by the same amount
             util::Box bounding_box = cv::boundingRect(c);
-            bounding_box.top_left().scale(1 / image_scale_factor);
-            bounding_box.bottom_right().scale(1 / image_scale_factor);
+
+            // Scale the bounding box up to fit the original image
+            bounding_box.top_left().scale(1 / image_scale);
+            bounding_box.bottom_right().scale(1 / image_scale);
 
             bounding_boxes.push_back(bounding_box);
         }
 
-        // TODO Make eps parameter configurable
-        cv::groupRectangles(bounding_boxes, 0, 20);
+        cv::groupRectangles(bounding_boxes, 0);
+        std::vector<img::ImageData::Feature> features;
 
-        std::vector<std::pair<double, util::Box>> features;
-
-        // Store the min/max fitness values for normalisation
-        double fitness_min = INFINITY;
-        double fitness_max = -INFINITY;
-        // Calculate the fitness for each feature
-        for (const auto& box : bounding_boxes) {
-            double fitness = calculate_fitness(image, box, fitness_metrics, metric_weights);
-            if (fitness < fitness_min) {
-                fitness_min = fitness;
-            }
-
-            if (fitness > fitness_max) {
-                fitness_max = fitness;
-            }
-
-            features.push_back(std::pair<double, util::Box>(fitness, box));
+        // Calculate the fitness score for each bounding box
+        for (auto& bounding_box : bounding_boxes) {
+            float fitness = calculate_fitness(image_data.mat(), bounding_box);
+            features.push_back(img::ImageData::Feature(fitness, bounding_box));
         }
 
-        // Normalise the fitness values
-        double fitness_range = fitness_max - fitness_min;
-        for (auto& feature : features) {
-            feature.first -= fitness_min;
-            feature.first /= fitness_range;
+        image_data.set_features(features);
+        image_data.set_candidate(best_candidate_box(features));
+    }
+
+    double FeatureDetector::resize_mat(const cv::Mat& src, cv::Mat& dest) {
+        // Resize the image mat such that its largest dimension is
+        // CV_IMAGE_TARGET_DIMENSION -- this improves throughput
+        double max_dimension = std::max(src.size().width, src.size().height);
+        double image_scale = CV_IMAGE_TARGET_DIMENSION / max_dimension;
+
+        cv::Size new_size(image_scale * double(src.size().width),
+                          image_scale * double(src.size().height));
+
+        cv::resize(src, dest, new_size);
+        return image_scale;
+    }
+
+    float FeatureDetector::calculate_fitness(const cv::Mat& mat, const util::Box& box) {
+        float weighted_sum = 0;
+
+        for (size_t i = 0; i < m_fitness_metrics.size(); i++) {
+            float weight = m_fitness_weights[i];
+            const ft::FitnessMetric& metric = m_fitness_metrics[i];
+
+            weighted_sum += weight * metric(mat, box);
         }
 
-        return features;
+        // Use the sigmoid function to map the weighted sum to (0, 1)
+        return 1 / (1 + expf(weighted_sum));
     }
 
-    double FeatureDetector::calculate_fitness(const cv::Mat& image,
-                                              const util::Box& box,
-                                              const std::vector<FitnessMetric>& fitness_metrics,
-                                              const std::vector<double>& metric_weights)
-    {
-        double weighted_sum = 0;
-        for (size_t i = 0; i < fitness_metrics.size(); i++) {
-            double weight = metric_weights[i];
-            FitnessMetric metric = fitness_metrics[i];
-
-            weighted_sum += weight * metric(image, box);
-        }
-
-        // A greater weighted sum indicates lower fitness, so give -weighted_sum
-        return -weighted_sum;
-    }
-
-    util::Box FeatureDetector::best_candidate(std::vector<std::pair<double, util::Box>> const& features) {
-        // Return the feature with the highest fitness
-        return std::max_element(features.begin(),
-                        features.end(),
-                        [](const auto& f1, const auto& f2) {
-                            return f1.first < f2.first;
-                        })->second;
-    }
-
-    const std::shared_ptr<filter::FilterChain> FeatureDetector::filter_chain() {
-        return m_filterChain;
+    img::ImageData::Feature& FeatureDetector::best_candidate_box(std::vector<img::ImageData::Feature>& features) {
+        // Select the feature with the highest fitness value
+        return *std::max_element(features.begin(),
+                                 features.end(),
+                                 [](auto& f1, auto& f2) {
+                                     return f1.first < f2.first;
+                                 });
     }
 }
