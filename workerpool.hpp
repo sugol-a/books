@@ -17,6 +17,8 @@ namespace worker {
             virtual ~WorkerPool() { };
             virtual std::shared_ptr<InputQueue> input() = 0;
             virtual std::shared_ptr<OutputQueue> output() = 0;
+            virtual void set_input(std::shared_ptr<InputQueue> in) = 0;
+            virtual void set_output(std::shared_ptr<OutputQueue> out) = 0;
             virtual void run_workers() = 0;
             virtual void join_all() = 0;
     };
