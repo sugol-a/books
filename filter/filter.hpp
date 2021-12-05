@@ -5,7 +5,7 @@
 namespace filter {
     class Filter {
         public:
-            virtual ~Filter();
+            virtual ~Filter() { };
             virtual cv::Mat apply(cv::Mat const& img) = 0;
     };
 }
