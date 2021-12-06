@@ -24,6 +24,8 @@ namespace ui {
             static MainWindow* create();
 
         private:
+            std::shared_ptr<img::ImageData> selected_image();
+
             void change_input_directory();
             void change_output_directory();
             void selected_input_directory(int id);

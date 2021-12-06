@@ -40,8 +40,8 @@ namespace ui {
                                                      Gtk::ButtonsType::OK,
                                                      true);
 
-        m_imageLoader = worker::ImageLoaderPool(1);
-        m_featureDetector = worker::FeatureDetectorPool(1, m_filterChain, {
+        m_imageLoader = worker::ImageLoaderPool(6);
+        m_featureDetector = worker::FeatureDetectorPool(6, m_filterChain, {
                 ft::distance_to(util::Point<double>{0, 0}),
                 ft::relative_area(0.5)
             },
@@ -63,6 +63,18 @@ namespace ui {
         MainWindow* mainWindow = Gtk::Builder::get_widget_derived<MainWindow>(ui, "mainWindow");
 
         return mainWindow;
+    }
+
+    std::shared_ptr<img::ImageData> MainWindow::selected_image() {
+        // Get the currently selected row
+        auto selection = m_fileTreeView->get_selection();
+        auto selected = selection->get_selected();
+        auto row = *selected;
+
+        if (!row)
+            return nullptr;
+
+        return row[m_fileColumns.m_imageData];
     }
 
     void MainWindow::change_input_directory() {
@@ -122,8 +134,9 @@ namespace ui {
     }
 
     void MainWindow::begin_import() {
-        m_imageLoader.input()->push(m_imageStore.images());
-        m_imageLoader.input()->close();
+        m_imageLoader.input()->push_vec(m_imageStore.images());
+        m_imageLoader.input()->finish();
+
         m_imageLoader.run_workers();
         m_featureDetector.run_workers();
 
@@ -140,8 +153,9 @@ namespace ui {
     bool MainWindow::import_progress() {
         m_progressWindow->set_progress(m_featureDetector.output()->size());
 
-        // Check if the worker's finished
-        if (m_featureDetector.output()->closed() && m_featureDetector.output()->size() == m_imageStore.images().size()) {
+        // Check if the worker's finished. The result queue may be larger than
+        // the actual number of images due to sentinel values
+        if (m_featureDetector.output()->size() >= m_imageStore.images().size()) {
             m_progressWindow->close();
             delete m_progressWindow;
 
@@ -180,7 +194,6 @@ namespace ui {
     }
 
     void MainWindow::change_layer() {
-        update_preview();
     }
 
     void MainWindow::overlay_toggled() {
@@ -200,28 +213,21 @@ namespace ui {
     }
 
     void MainWindow::selection_changed(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*) {
-
         update_preview();
     }
 
     void MainWindow::update_preview() {
-        // Get the currently selected row
-        auto selection = m_fileTreeView->get_selection();
-        auto selected = selection->get_selected();
-        auto row = *selected;
-
-        if (!row)
-            return;
-
         // Unload the currently loaded image
         if (m_currentImage) {
             m_currentImage->unload();
         }
 
         // Load the new image
-        m_currentImage = row.get_value(m_fileColumns.m_imageData);
-        m_currentImage->load(m_currentImage->filename());
+        m_currentImage = selected_image();
+        if (!m_currentImage)
+            return;
 
+        m_currentImage->load(m_currentImage->filename());
         m_previewPane->set_image(m_currentImage);
         m_previewPane->queue_draw();
     }
