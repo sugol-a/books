@@ -2,6 +2,7 @@
 #include <opencv2/objdetect.hpp>
 #include <featuredetector.hpp>
 
+#include <iostream>
 namespace worker {
     // TODO: Ensure that fitness_metrics and fitness_metric_weights have the
     // same size
@@ -39,10 +40,26 @@ namespace worker {
         m_thread = std::thread(work_fn);
     }
 
+    cv::UMat FeatureDetector::apply_filters(const cv::UMat& mat) {
+        // TODO: Remove magic numbers
+        cv::Mat dilate_kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(4, 4));
+        cv::UMat result;
+
+        cv::cvtColor(mat, result, cv::COLOR_RGB2GRAY);
+        cv::medianBlur(result, result, 11);
+        cv::normalize(result, result, 255, 0, cv::NORM_MINMAX);
+        cv::dilate(result, result, dilate_kernel);
+        cv::threshold(result, result, 50, 255, cv::THRESH_BINARY);
+        cv::Canny(result, result, 0.0, 1.0);
+
+        return result;
+    }
+
     void FeatureDetector::find_features(img::ImageData& image_data) {
-        cv::Mat result;
-        double image_scale = resize_mat(image_data.mat(), result);
-        result = m_filter_chain.apply_filters(result);
+        cv::UMat image_umat = image_data.mat().getUMat(cv::ACCESS_READ);
+        cv::UMat result;
+        double image_scale = resize_mat(image_umat, result);
+        result = apply_filters(result);
 
         std::vector<std::vector<cv::Point>> contours;
         cv::findContours(result, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
@@ -71,7 +88,7 @@ namespace worker {
         image_data.set_candidate(best_candidate_box(features));
     }
 
-    double FeatureDetector::resize_mat(const cv::Mat& src, cv::Mat& dest) {
+    double FeatureDetector::resize_mat(const cv::UMat& src, cv::UMat& dest) {
         // Resize the image mat such that its largest dimension is
         // CV_IMAGE_TARGET_DIMENSION -- this improves throughput
         double max_dimension = std::max(src.size().width, src.size().height);

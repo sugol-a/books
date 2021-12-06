@@ -55,8 +55,9 @@ namespace worker {
             void run() override;
 
         private:
+            cv::UMat apply_filters(const cv::UMat& mat);
             void find_features(img::ImageData& image_data);
-            double resize_mat(const cv::Mat& src, cv::Mat& dest);
+            double resize_mat(const cv::UMat& src, cv::UMat& dest);
             float calculate_fitness(const cv::Mat& mat, const util::Box& box);
             img::ImageData::Feature& best_candidate_box(std::vector<img::ImageData::Feature>& features);
 
