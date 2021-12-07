@@ -29,8 +29,8 @@ namespace ui {
         m_showFeaturesChk->signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
         m_showFitnessChk->signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
 
-        // m_fileListStore = Gtk::ListStore::create(m_fileColumns);
-        // m_fileTreeView->set_model(m_fileListStore);
+        m_fileListStore = Gtk::ListStore::create(m_fileColumns);
+        m_fileTreeView->set_model(m_fileListStore);
         m_fileTreeView->append_column("File", m_fileColumns.m_inputName);
         m_fileTreeView->append_column_editable("Output", m_fileColumns.m_outputName);
         m_fileTreeView->append_column_editable("Autocrop", m_fileColumns.m_autoCrop);
@@ -171,8 +171,8 @@ namespace ui {
         // Check if the worker's finished. The result queue may be larger than
         // the actual number of images due to sentinel values
         if (m_featureDetector->output()->size() >= m_imageStore.images().size()) {
-            // Add the new liststore
-            m_fileListStore = Gtk::ListStore::create(m_fileColumns);
+            // Clear the old contents of the list store
+            m_fileListStore->clear();
 
             std::shared_ptr<img::ImageData> image_data = nullptr;
             while ((image_data = m_featureDetector->output()->pop()) != nullptr) {
@@ -185,8 +185,6 @@ namespace ui {
                 row[m_fileColumns.m_fullPath] = image_data->filename();
                 row[m_fileColumns.m_imageData] = image_data;
             }
-
-            m_fileTreeView->set_model(m_fileListStore);
 
             m_progressWindow->close();
             delete m_progressWindow;
