@@ -57,11 +57,13 @@ namespace ui {
         return mainWindow;
     }
 
-    std::shared_ptr<img::ImageData> MainWindow::selected_image() {
-        // Get the currently selected row
+    Gtk::TreeRow MainWindow::selected_row() {
         auto selection = m_fileTreeView->get_selection();
-        auto selected = selection->get_selected();
-        auto row = *selected;
+        return *selection->get_selected();
+    }
+
+    std::shared_ptr<img::ImageData> MainWindow::selected_image() {
+        auto row = selected_row();
 
         if (!row)
             return nullptr;
@@ -301,8 +303,10 @@ namespace ui {
         if (!m_currentImage)
             return;
 
+        auto row = selected_row();
         m_currentImage->load(m_currentImage->filename());
         m_previewPane->set_image(m_currentImage);
+        m_previewPane->show_crop(row[m_fileColumns.m_autoCrop]);
         m_previewPane->queue_draw();
     }
 }

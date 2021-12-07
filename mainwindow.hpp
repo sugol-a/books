@@ -24,6 +24,7 @@ namespace ui {
 
         private:
             std::shared_ptr<img::ImageData> selected_image();
+            Gtk::TreeRow selected_row();
 
             void change_input_directory();
             void change_output_directory();
