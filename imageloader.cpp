@@ -1,4 +1,4 @@
-#include <iostream>
+#include <imageloaderpool.hpp>
 #include <imageloader.hpp>
 
 namespace worker {
@@ -8,19 +8,18 @@ namespace worker {
         set_output_queue(output_queue);
     }
 
-    void ImageLoader::run() {
-        auto work_fn = [&] {
+    void ImageLoader::run(IWorkerPool* wp) {
+        auto work_fn = [=] {
+            ImageLoaderPool* worker_pool = static_cast<ImageLoaderPool*>(wp);
+
             std::shared_ptr<std::string> filename = nullptr;
             while ((filename = m_input_queue->pop()) != nullptr) {
                 std::shared_ptr<img::ImageData> image = std::make_shared<img::ImageData>(*filename);
                 m_output_queue->push(std::move(image));
             }
 
-            // Signal other producers to terminate
-            m_input_queue->push(nullptr);
-
-            // Signal the consumers to terminate
-            m_output_queue->push(nullptr);
+            // This worker is finished
+            worker_pool->signal_done();
         };
 
         m_thread = std::thread(work_fn);

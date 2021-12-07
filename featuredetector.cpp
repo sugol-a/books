@@ -1,25 +1,26 @@
 #include <cmath>
 #include <opencv2/objdetect.hpp>
+
+#include <featuredetectorpool.hpp>
+#include <workerpool.hpp>
 #include <featuredetector.hpp>
 
-#include <iostream>
 namespace worker {
     // TODO: Ensure that fitness_metrics and fitness_metric_weights have the
     // same size
     FeatureDetector::FeatureDetector(std::shared_ptr<InputQueue> input_queue,
                                      std::shared_ptr<OutputQueue> output_queue,
-                                     const filter::FilterChain& filter_chain,
                                      const std::vector<ft::FitnessMetric>& fitness_metrics,
                                      const std::vector<float>& fitness_metric_weights)
-        : m_filter_chain(filter_chain),
-          m_fitness_metrics(fitness_metrics),
+        : m_fitness_metrics(fitness_metrics),
           m_fitness_weights(fitness_metric_weights) {
         set_input_queue(input_queue);
         set_output_queue(output_queue);
     }
 
-    void FeatureDetector::run() {
-        auto work_fn = [&] {
+    void FeatureDetector::run(IWorkerPool* wp) {
+        auto work_fn = [=] {
+            FeatureDetectorPool* worker_pool = static_cast<FeatureDetectorPool*>(wp);
             std::shared_ptr<img::ImageData> image_data = nullptr;
 
             while ((image_data = m_input_queue->pop()) != nullptr) {
@@ -32,9 +33,8 @@ namespace worker {
                 m_output_queue->push(image_data);
             }
 
-            // Signal other consumers to terminate
-            m_input_queue->push(nullptr);
-            m_output_queue->push(nullptr);
+            // Tell the pool this worker is finished
+            worker_pool->signal_done();
         };
 
         m_thread = std::thread(work_fn);

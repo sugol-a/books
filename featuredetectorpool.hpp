@@ -1,6 +1,5 @@
 #pragma once
 
-#include <filter/filterchain.hpp>
 #include <featuredetector.hpp>
 #include <workerpool.hpp>
 
@@ -9,9 +8,10 @@ namespace worker {
         public:
             FeatureDetectorPool() { }
             FeatureDetectorPool(size_t n_workers,
-                                const filter::FilterChain& filter_chain,
                                 std::vector<ft::FitnessMetric> fitness_metrics,
                                 std::vector<float> fitness_weights);
+
+            ~FeatureDetectorPool();
 
             std::shared_ptr<InputQueue> input() override;
             std::shared_ptr<OutputQueue> output() override;
@@ -20,10 +20,13 @@ namespace worker {
 
             void run_workers() override;
             void join_all() override;
+            void signal_done() override;
 
         private:
             std::shared_ptr<InputQueue> m_input_queue;
             std::shared_ptr<OutputQueue> m_output_queue;
+            mutable std::mutex m_mutex;
+            size_t m_active_workers;
             std::vector<std::unique_ptr<FeatureDetector>> m_workers;
     };
 }

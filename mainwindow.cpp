@@ -8,6 +8,9 @@
 namespace ui {
     MainWindow::MainWindow(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>& ref_builder)
         : Gtk::ApplicationWindow(cobject) {
+#ifdef DEBUG
+        std::cout << "THIS IS A DEBUG BUILD" << std::endl;
+#endif
         m_imageDirButton = ref_builder->get_widget<Gtk::Button>("btnImageDirectory");
         m_exportDirButton = ref_builder->get_widget<Gtk::Button>("btnExportDirectory");
         m_exportButton = ref_builder->get_widget<Gtk::Button>("btnExport");
@@ -40,18 +43,6 @@ namespace ui {
                                                      Gtk::ButtonsType::OK,
                                                      true);
 
-        m_imageLoader = worker::ImageLoaderPool(6);
-        m_featureDetector = worker::FeatureDetectorPool(6, m_filterChain, {
-                ft::distance_to(util::Point<double>{0, 0}),
-                ft::relative_area(0.5)
-            },
-            {
-                2,
-                5
-            });
-
-        // Link the image loader and feature detector pools
-        m_featureDetector.set_input(m_imageLoader.output());
     }
 
     MainWindow::~MainWindow() {
@@ -134,11 +125,30 @@ namespace ui {
     }
 
     void MainWindow::begin_import() {
-        m_imageLoader.input()->push_vec(m_imageStore.images());
-        m_imageLoader.input()->finish();
+        // Automagically determine the number of threads to use for each task
+        std::vector<size_t> thread_allocations = worker::thread_allocations({ 2, 1 });
 
-        m_imageLoader.run_workers();
-        m_featureDetector.run_workers();
+        std::cout << "Using " << thread_allocations[0] << " threads for image loading" << std::endl;
+        std::cout << "Using " << thread_allocations[1] << " threads for feature detection" << std::endl;
+
+        m_imageLoader = new worker::ImageLoaderPool(thread_allocations[0]);
+        m_featureDetector = new worker::FeatureDetectorPool(thread_allocations[1], {
+                ft::distance_to(util::Point<double>{0, 0}),
+                ft::relative_area(0.5)
+            },
+            {
+                2,
+                5
+            });
+
+        m_imageLoader->input()->push_vec(m_imageStore.images());
+        m_imageLoader->input()->finish();
+
+        // Link the image loader and feature detector pools
+        m_featureDetector->set_input(m_imageLoader->output());
+
+        m_imageLoader->run_workers();
+        m_featureDetector->run_workers();
 
         // Create and display a modal progress window
         m_progressWindow = ProgressWindow::create();
@@ -151,19 +161,16 @@ namespace ui {
     }
 
     bool MainWindow::import_progress() {
-        m_progressWindow->set_progress(m_featureDetector.output()->size());
+        m_progressWindow->set_progress(m_featureDetector->output()->size());
 
         // Check if the worker's finished. The result queue may be larger than
         // the actual number of images due to sentinel values
-        if (m_featureDetector.output()->size() >= m_imageStore.images().size()) {
-            m_progressWindow->close();
-            delete m_progressWindow;
-
+        if (m_featureDetector->output()->size() >= m_imageStore.images().size()) {
             // Add the new liststore
             m_fileListStore = Gtk::ListStore::create(m_fileColumns);
 
             std::shared_ptr<img::ImageData> image_data = nullptr;
-            while ((image_data = m_featureDetector.output()->pop()) != nullptr) {
+            while ((image_data = m_featureDetector->output()->pop()) != nullptr) {
                 std::filesystem::path file_path(image_data->filename());
                 auto row = *(m_fileListStore->append());
 
@@ -176,8 +183,11 @@ namespace ui {
 
             m_fileTreeView->set_model(m_fileListStore);
 
-            m_imageLoader.join_all();
-            m_featureDetector.join_all();
+            m_progressWindow->close();
+            delete m_progressWindow;
+
+            delete m_imageLoader;
+            delete m_featureDetector;
 
             // Stop receiving idle updates
             return false;

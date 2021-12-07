@@ -4,6 +4,8 @@
 #include <workqueue.hpp>
 
 namespace worker {
+    class IWorkerPool;
+
     /**
      * Worker thread base class
      */
@@ -56,7 +58,7 @@ namespace worker {
             /**
              * Runs the worker thread
              */
-            virtual void run() = 0;
+            virtual void run(IWorkerPool*) = 0;
 
             /**
              * Joins the worker thread

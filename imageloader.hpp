@@ -9,6 +9,6 @@ namespace worker {
             ImageLoader(std::shared_ptr<InputQueue> input_queue,
                         std::shared_ptr<OutputQueue> output_queue);
 
-            void run() override;
+            void run(IWorkerPool* wp) override;
     };
 }

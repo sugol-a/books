@@ -5,9 +5,7 @@
 
 #include <gtkmm.h>
 
-// #include <featuredetector.hpp>
 #include <imagestore.hpp>
-// #include <imageloader.hpp>
 #include <imageloaderpool.hpp>
 #include <featuredetectorpool.hpp>
 #include <imagepreview.hpp>
@@ -67,9 +65,8 @@ namespace ui {
 
             img::ImageStore m_imageStore;
 
-            filter::FilterChain m_filterChain;
-            worker::ImageLoaderPool m_imageLoader;
-            worker::FeatureDetectorPool m_featureDetector;
+            worker::ImageLoaderPool* m_imageLoader;
+            worker::FeatureDetectorPool* m_featureDetector;
 
             std::filesystem::path m_exportDirectory;
 

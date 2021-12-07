@@ -15,7 +15,7 @@ namespace worker {
             /**
              * Constructs a new empty work queue
              */
-            WorkQueue() { }
+            WorkQueue() : m_finished(false) { }
 
             /**
              * Pushes a resource to the internal queue. Uses a mutex internally
@@ -45,7 +45,7 @@ namespace worker {
                 }
 
                 lock.unlock();
-                m_cv.notify_all();
+                m_cv.notify_one();
             }
 
             void push_vec(const std::vector<T>& data) {
@@ -56,7 +56,7 @@ namespace worker {
                 }
 
                 lock.unlock();
-                m_cv.notify_all();
+                m_cv.notify_one();
             }
 
             /**
@@ -71,22 +71,28 @@ namespace worker {
                 std::unique_lock lock(m_mutex);
 
                 // Wait for data to appear on the queue, or for the queue to close
-                m_cv.wait(lock, [this]{ return m_queue.size() > 0; });
+                m_cv.wait(lock, [this]{ return m_queue.size() > 0 || m_finished; });
 
-                std::shared_ptr<T> data = m_queue.front();
-                m_queue.pop();
-                lock.unlock();
+                if (m_queue.size() > 0) {
+                    auto data = m_queue.front();
+                    m_queue.pop();
 
-                m_cv.notify_one();
-
-                return data;
+                    return data;
+                } else {
+                    return nullptr;
+                }
             }
 
             /**
              * Signal to workers that there is no more data to process
              */
             void finish() {
-                push(nullptr);
+                m_finished = true;
+                m_cv.notify_all();
+            }
+
+            bool is_finished() {
+                return m_finished;
             }
 
             /**
@@ -110,6 +116,7 @@ namespace worker {
             }
 
         private:
+            std::atomic_bool m_finished;
             std::mutex m_mutex;
             std::queue<std::shared_ptr<T>> m_queue;
             std::condition_variable m_cv;
