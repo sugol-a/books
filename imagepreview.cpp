@@ -3,18 +3,23 @@
 namespace ui {
     ImagePreview::ImagePreview() {}
 
-    ImagePreview::ImagePreview(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>& ref_builder)
+    ImagePreview::ImagePreview(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>&)
         : Gtk::DrawingArea(cobject) {
         m_showFeatures = false;
         m_showFitness = false;
         m_showCrop = true;
         m_imageData = nullptr;
+        m_margins = 0;
 
         set_draw_func(sigc::mem_fun(*this, &ImagePreview::on_draw));
     }
 
     void ImagePreview::set_image(std::shared_ptr<img::ImageData> image) {
         m_imageData = image;
+    }
+
+    void ImagePreview::set_margins(size_t margins) {
+        m_margins = margins;
     }
 
     void ImagePreview::show_crop(bool show_crop) {
@@ -37,14 +42,13 @@ namespace ui {
 
         // Determine an appropriate image scale, using the maximum dimension of
         // the image. This way the whole image is always shown in the preview.
-        double scale;
         if (m_imageData->pixbuf()->get_width() > m_imageData->pixbuf()->get_height()) {
-            scale = double(width) / m_imageData->pixbuf()->get_width();
+            m_scale = double(width) / m_imageData->pixbuf()->get_width();
         } else {
-            scale = double(height) / m_imageData->pixbuf()->get_height();
+            m_scale = double(height) / m_imageData->pixbuf()->get_height();
         }
 
-        cr->scale(scale, scale);
+        cr->scale(m_scale, m_scale);
         Gdk::Cairo::set_source_pixbuf(cr, m_imageData->pixbuf());
 
         // Draw the image buffer
@@ -89,7 +93,16 @@ namespace ui {
     }
 
     void ImagePreview::draw_crop(const Cairo::RefPtr<Cairo::Context>& cr) {
-        util::Box& crop = m_imageData->candidate().second;
+        util::Box crop = m_imageData->candidate().second;
+
+        util::Box bounds;
+        bounds.top_left() = { 0, 0 };
+        bounds.bottom_right() = { m_imageData->pixbuf()->get_width(), m_imageData->pixbuf()->get_height() };
+
+        // Apply margins to the crop rect
+        crop.expand(m_margins, bounds);
+        bounds.top_left().scale(m_scale);
+        bounds.bottom_right().scale(m_scale);
 
         cr->set_source_rgb(0.0, 1.0, 0.0);
         cr->set_line_width(8);

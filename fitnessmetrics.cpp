@@ -13,7 +13,7 @@ namespace ft {
     FitnessMetric aspect_ratio(double aspect) {
         // Returns the absolute difference between the ideal aspect ratio and
         // the actual aspect ratio of the bouding box
-        return [=](const cv::Mat& img, const util::Box& box) {
+        return [=](const cv::Mat&, const util::Box& box) {
             double box_aspect = box.width() / box.height();
             return abs(box_aspect - aspect);
         };

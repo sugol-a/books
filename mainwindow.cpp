@@ -23,7 +23,7 @@ namespace ui {
 
         m_imageDirButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::change_input_directory));
         m_exportDirButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::change_output_directory));
-        m_exportButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::do_export));
+        m_exportButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::begin_export));
         m_marginScale->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::margins_changed));
         m_layerButton->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::change_layer));
         m_showFeaturesChk->signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
@@ -43,6 +43,7 @@ namespace ui {
                                                      Gtk::ButtonsType::OK,
                                                      true);
 
+        m_margins = 0;
     }
 
     MainWindow::~MainWindow() {
@@ -121,6 +122,10 @@ namespace ui {
     }
 
     void MainWindow::margins_changed() {
+        m_margins = m_marginScale->get_value();
+        auto image = selected_image();
+
+        m_previewPane->set_margins(m_margins);
         m_previewPane->queue_draw();
     }
 
@@ -196,11 +201,68 @@ namespace ui {
         return true;
     }
 
-    void MainWindow::start_export_worker() {
+    void MainWindow::begin_export() {
+        if (m_exportDirectory.empty()) {
+            m_exportErrorDialog->show();
+            m_exportErrorDialog->signal_response().connect(sigc::hide(sigc::mem_fun(*m_exportErrorDialog, &Gtk::Widget::hide)));
+            return;
+        }
+
+        std::vector<std::pair<std::shared_ptr<img::ImageData>, worker::ExportParameters>> export_data;
+
+        auto iter = m_fileListStore->children();
+        for (auto& row : iter) {
+            Glib::ustring output_filename = row[m_fileColumns.m_outputName];
+            bool do_crop = row[m_fileColumns.m_autoCrop];
+            std::shared_ptr<img::ImageData> image_data = row[m_fileColumns.m_imageData];
+
+            worker::ExportParameters params = {
+                m_exportDirectory,
+                m_margins,
+                output_filename,
+                do_crop
+            };
+
+            auto pair = std::pair<std::shared_ptr<img::ImageData>, worker::ExportParameters>(
+                image_data,
+                params);
+
+            export_data.push_back(pair);
+        }
+
+        // Create and run the workers
+        std::vector<size_t> thread_allocations = worker::thread_allocations({1});
+
+        std::cout << "Exporting with " << thread_allocations[0] << " threads" << std::endl;
+
+        m_imageExporter = new worker::ImageExporterPool(thread_allocations[0]);
+        m_imageExporter->input()->push_vec(export_data);
+        m_imageExporter->input()->finish();
+        m_imageExporter->run_workers();
+
+        // Create and display a progress window
+        m_progressWindow = ProgressWindow::create();
+        m_progressWindow->set_jobs(m_imageStore.images().size());
+        m_progressWindow->set_modal(true);
+        m_progressWindow->set_transient_for(*this);
+        Glib::signal_idle().connect(sigc::mem_fun(*this, &MainWindow::export_progress));
+
+        m_progressWindow->show();
     }
 
-    bool MainWindow::update_export_worker_progress() {
+    bool MainWindow::export_progress() {
+        m_progressWindow->set_progress(m_imageExporter->output()->size());
 
+        if (m_imageExporter->output()->size() >= m_imageStore.images().size()) {
+            m_progressWindow->close();
+
+            delete m_progressWindow;
+            delete m_imageExporter;
+
+            return false;
+        }
+
+        return true;
     }
 
     void MainWindow::change_layer() {
@@ -222,7 +284,7 @@ namespace ui {
         m_previewPane->queue_draw();
     }
 
-    void MainWindow::selection_changed(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*) {
+    void MainWindow::selection_changed(const Gtk::TreeModel::Path&, Gtk::TreeViewColumn*) {
         update_preview();
     }
 
@@ -240,44 +302,5 @@ namespace ui {
         m_currentImage->load(m_currentImage->filename());
         m_previewPane->set_image(m_currentImage);
         m_previewPane->queue_draw();
-    }
-
-    void MainWindow::do_export() {
-        if (m_exportDirectory.empty()) {
-            m_exportErrorDialog->show();
-            m_exportErrorDialog->signal_response().connect(sigc::hide(sigc::mem_fun(*m_exportErrorDialog, &Gtk::Widget::hide)));
-            return;
-        }
-
-        auto iter = m_fileListStore->children();
-        std::cout << iter.size() << std::endl;
-        for (auto& row : iter) {
-            Glib::ustring input_filename = row[m_fileColumns.m_fullPath];
-            Glib::ustring output_filename = row[m_fileColumns.m_outputName];
-            bool do_crop = row[m_fileColumns.m_autoCrop];
-            std::shared_ptr<img::ImageData> image_data = row[m_fileColumns.m_imageData];
-
-            image_data->load(image_data->filename());
-            util::Box crop = image_data->candidate().second;
-
-            cv::Mat output_image;
-            if (do_crop && crop.area() > 0) {
-                // crop.expand(m_marginScale->get_value(),
-                //             util::Box(0, 0, img.mat().size().width, img.mat().size().height));
-                output_image = image_data->mat()(crop);
-            } else {
-                output_image = image_data->mat();
-            }
-
-            std::filesystem::path full_output_path = m_exportDirectory.string() + "/" + std::string(output_filename);
-
-            // ImageData stores its cv::Mat as RGB data, but imwrite expects BGR
-            cv::cvtColor(output_image, output_image, cv::COLOR_RGB2BGR);
-
-            cv::imwrite(full_output_path.string(), output_image);
-
-            image_data->unload();
-            // std::cout << input_filename << " -> " << output_filename << ", " << do_crop << std::endl;
-        }
     }
 }

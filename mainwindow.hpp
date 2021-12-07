@@ -8,6 +8,7 @@
 #include <imagestore.hpp>
 #include <imageloaderpool.hpp>
 #include <featuredetectorpool.hpp>
+#include <imageexporterpool.hpp>
 #include <imagepreview.hpp>
 #include <progresswindow.hpp>
 
@@ -34,6 +35,9 @@ namespace ui {
             void begin_import();
             bool import_progress();
 
+            void begin_export();
+            bool export_progress();
+
             void start_export_worker();
             bool update_export_worker_progress();
 
@@ -42,8 +46,6 @@ namespace ui {
 
             void selection_changed(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*);
             void update_preview();
-
-            void do_export();
 
         private:
             class ImageModelColumns : public Gtk::TreeModel::ColumnRecord {
@@ -67,6 +69,7 @@ namespace ui {
 
             worker::ImageLoaderPool* m_imageLoader;
             worker::FeatureDetectorPool* m_featureDetector;
+            worker::ImageExporterPool* m_imageExporter;
 
             std::filesystem::path m_exportDirectory;
 
@@ -92,5 +95,7 @@ namespace ui {
             ui::ProgressWindow* m_progressWindow;
 
             ui::ImagePreview* m_previewPane;
+
+            size_t m_margins;
     };
 }

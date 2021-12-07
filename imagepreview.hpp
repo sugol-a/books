@@ -14,6 +14,7 @@ namespace ui {
             ImagePreview(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>& ref_builder);
 
             void set_image(std::shared_ptr<img::ImageData> image);
+            void set_margins(size_t margins);
 
             void show_crop(bool show);
             void show_features(bool show);
@@ -29,6 +30,8 @@ namespace ui {
             bool m_showCrop;
             bool m_showFeatures;
             bool m_showFitness;
+            size_t m_margins;
+            double m_scale;
             std::shared_ptr<img::ImageData> m_imageData;
     };
 }
