@@ -2,8 +2,6 @@
 
 #include <fitnessmetrics.hpp>
 
-#include <iostream>
-
 namespace ft {
     static double map(double from_min, double from_max, double to_min, double to_max, double value) {
         double from_range = from_max - from_min;

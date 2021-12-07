@@ -1,4 +1,3 @@
-#include <iostream>
 #include <imagepreview.hpp>
 
 namespace ui {

@@ -1,6 +1,5 @@
 #include <filesystem>
 #include <imagestore.hpp>
-#include <iostream>
 
 namespace img {
     ImageStore::ImageStore() {
