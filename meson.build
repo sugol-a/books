@@ -2,6 +2,10 @@ project('books', 'cpp',
         version : '0.1',
         default_options : ['warning_level=3', 'cpp_std=c++17', 'c_std=c11'])
 
+if get_option('buildtype').startswith('debug')
+  add_project_arguments('-DDEBUG', language: 'cpp')
+endif
+
 deps = [
   dependency('opencv4'),
   dependency('gtkmm-4.0'),
@@ -26,17 +30,11 @@ sources = [ 'books.cpp',
             'imageloader.cpp',
             'imageloaderpool.cpp',
             'imagedata.cpp',
+            'workerpool.cpp',
             'imagestore.cpp',
             'featuredetector.cpp',
             'featuredetectorpool.cpp',
             'fitnessmetrics.cpp',
-            'filter/filterchain.cpp',
-            'filter/bgr2grey.cpp',
-            'filter/medianblur.cpp',
-            'filter/normalise.cpp',
-            'filter/dilate.cpp',
-            'filter/threshold.cpp',
-            'filter/canny.cpp',
             'util/box.cpp',
             ui_res ]
 
