@@ -259,6 +259,10 @@ namespace ui {
             delete m_progressWindow;
             delete m_imageExporter;
 
+            // The currently exported image will get unloaded during the export
+            // process, so the preview needs to be reloaded
+            update_preview();
+
             return false;
         }
 
