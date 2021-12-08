@@ -44,4 +44,5 @@ executable('books',
            sources,
            install : true,
            dependencies: deps,
-	         include_directories: inc)
+	         include_directories: inc,
+           gui_app: true)
