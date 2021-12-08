@@ -217,7 +217,7 @@ namespace ui {
             std::shared_ptr<img::ImageData> image_data = row[m_fileColumns.m_imageData];
 
             worker::ExportParameters params = {
-                m_exportDirectory,
+                m_exportDirectory.string(),
                 m_margins,
                 output_filename,
                 do_crop
