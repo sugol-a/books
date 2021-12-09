@@ -1,0 +1,24 @@
+1 VERSIONINFO
+FILEVERSION 1,0,0,0
+PRODUCTVERSION 1,0,0,0
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN
+            VALUE "CompanyName", "Sugol"
+            VALUE "FileDescription", "Books"
+            VALUE "FileVersion", "0.2.1"
+            VALUE "InternalName", "Books"
+            VALUE "LegalCopyright", "al (al@sugol.org)"
+            VALUE "OriginalFilename", "books.exe"
+            VALUE "ProductName", "Books"
+            VALUE "ProductVersion", "0.2.1"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END
+id ICON "books.ico"
