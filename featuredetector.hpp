@@ -2,6 +2,7 @@
 
 #include <optional>
 
+#include <featuredetectorparams.hpp>
 #include <fitnessmetrics.hpp>
 #include <imagedata.hpp>
 #include <worker.hpp>
@@ -14,7 +15,8 @@ namespace worker {
             FeatureDetector(std::shared_ptr<InputQueue> input_queue,
                             std::shared_ptr<OutputQueue> output_queue,
                             const std::vector<ft::FitnessMetric>& fitness_metrics,
-                            const std::vector<float>& fitness_metric_weights);
+                            const std::vector<float>& fitness_metric_weights,
+                            const FeatureDetectorParams& params);
 
             void run(IWorkerPool* wp) override;
 
@@ -28,5 +30,6 @@ namespace worker {
         private:
             std::vector<ft::FitnessMetric> m_fitness_metrics;
             std::vector<float> m_fitness_weights;
+            const FeatureDetectorParams& m_params;
     };
 }

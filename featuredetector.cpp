@@ -1,4 +1,5 @@
 #include <cmath>
+#include <iostream>
 #include <opencv2/objdetect.hpp>
 
 #include <featuredetectorpool.hpp>
@@ -11,9 +12,11 @@ namespace worker {
     FeatureDetector::FeatureDetector(std::shared_ptr<InputQueue> input_queue,
                                      std::shared_ptr<OutputQueue> output_queue,
                                      const std::vector<ft::FitnessMetric>& fitness_metrics,
-                                     const std::vector<float>& fitness_metric_weights)
+                                     const std::vector<float>& fitness_metric_weights,
+                                     const FeatureDetectorParams& params)
         : m_fitness_metrics(fitness_metrics),
-          m_fitness_weights(fitness_metric_weights) {
+          m_fitness_weights(fitness_metric_weights),
+          m_params(params) {
         set_input_queue(input_queue);
         set_output_queue(output_queue);
     }
@@ -42,14 +45,16 @@ namespace worker {
 
     cv::UMat FeatureDetector::apply_filters(const cv::UMat& mat) {
         // TODO: Remove magic numbers
-        cv::Mat dilate_kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(4, 4));
+        cv::Mat dilate_kernel = cv::getStructuringElement(cv::MORPH_RECT,
+                                                          cv::Size(m_params.dilate_kernel_size,
+                                                                   m_params.dilate_kernel_size));
         cv::UMat result;
 
         cv::cvtColor(mat, result, cv::COLOR_RGB2GRAY);
-        cv::medianBlur(result, result, 11);
+        cv::medianBlur(result, result, m_params.blur_kernel_size);
         cv::normalize(result, result, 255, 0, cv::NORM_MINMAX);
         cv::dilate(result, result, dilate_kernel);
-        cv::threshold(result, result, 50, 255, cv::THRESH_BINARY);
+        cv::threshold(result, result, m_params.threshold, 255, cv::THRESH_BINARY);
         cv::Canny(result, result, 0.0, 1.0);
 
         return result;

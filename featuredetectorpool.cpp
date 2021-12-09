@@ -3,7 +3,9 @@
 namespace worker {
     FeatureDetectorPool::FeatureDetectorPool(size_t n_workers,
                                              std::vector<ft::FitnessMetric> fitness_metrics,
-                                             std::vector<float> fitness_weights) {
+                                             std::vector<float> fitness_weights,
+                                             FeatureDetectorParams params)
+        : m_params(params) {
         m_active_workers = n_workers;
         m_input_queue = std::make_shared<InputQueue>();
         m_output_queue = std::make_shared<OutputQueue>();
@@ -12,7 +14,8 @@ namespace worker {
             m_workers.push_back(std::make_unique<FeatureDetector>(m_input_queue,
                                                                   m_output_queue,
                                                                   fitness_metrics,
-                                                                  fitness_weights));
+                                                                  fitness_weights,
+                                                                  m_params));
         }
     }
 

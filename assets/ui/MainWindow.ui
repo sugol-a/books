@@ -103,12 +103,13 @@
                     </child>
                     <child>
                       <object class="GtkScale" id="scaleMargins">
+                        <property name="draw-value">1</property>
                         <property name="hexpand">1</property>
                         <property name="adjustment">
                           <object class="GtkAdjustment">
-                          <property name="lower">-50</property>
-                          <property name="upper">200</property>
-                          <property name="value">0</property>
+                            <property name="lower">-50</property>
+                            <property name="upper">200</property>
+                            <property name="value">0</property>
                           </object>
                         </property>
                         <layout>
@@ -117,6 +118,17 @@
                         </layout>
                       </object>
                     </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="btnReload">
+                    <property name="label">Reload</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="btnExport">
+                    <property name="label" translatable="yes">Export</property>
+                    <property name="receives-default">1</property>
                   </object>
                 </child>
                 <child>
@@ -139,6 +151,105 @@
                           <object class="GtkCheckButton" id="chkShowFitness">
                             <property name="label">Display fitness scores</property>
                             <property name="sensitive">0</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkGrid">
+                            <property name="can-focus">0</property>
+                            <property name="row-spacing">6</property>
+                            <property name="column-spacing">6</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Blur kernel size</property>
+                                <property name="can-focus">0</property>
+                                <property name="halign">start</property>
+                                <property name="hexpand">1</property>
+                                <layout>
+                                  <property name="column">0</property>
+                                  <property name="row">0</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkScale" id="scaleBlurKernel">
+                                <property name="round-digits">0</property>
+                                <property name="draw-value">1</property>
+                                <property name="hexpand">1</property>
+                                <property name="adjustment">
+                                  <object class="GtkAdjustment">
+                                    <property name="lower">1</property>
+                                    <property name="upper">49</property>
+                                    <property name="step-increment">2</property>
+                                    <property name="page-increment">2</property>
+                                    <property name="value">11</property>
+                                  </object>
+                                </property>
+                                <layout>
+                                  <property name="column">1</property>
+                                  <property name="row">0</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Dilate kernel size</property>
+                                <property name="can-focus">0</property>
+                                <property name="halign">start</property>
+                                <property name="hexpand">1</property>
+                                <layout>
+                                  <property name="column">0</property>
+                                  <property name="row">1</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkScale" id="scaleDilate">
+                                <property name="round-digits">0</property>
+                                <property name="draw-value">1</property>
+                                <property name="hexpand">1</property>
+                                <property name="adjustment">
+                                  <object class="GtkAdjustment">
+                                    <property name="lower">0</property>
+                                    <property name="upper">50</property>
+                                    <property name="value">4</property>
+                                  </object>
+                                </property>
+                                <layout>
+                                  <property name="column">1</property>
+                                  <property name="row">1</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Threshold</property>
+                                <property name="can-focus">0</property>
+                                <property name="halign">start</property>
+                                <property name="hexpand">1</property>
+                                <layout>
+                                  <property name="column">0</property>
+                                  <property name="row">2</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkScale" id="scaleThreshold">
+                                <property name="round-digits">0</property>
+                                <property name="draw-value">1</property>
+                                <property name="hexpand">1</property>
+                                <property name="adjustment">
+                                  <object class="GtkAdjustment">
+                                    <property name="lower">0</property>
+                                    <property name="upper">255</property>
+                                    <property name="value">50</property>
+                                  </object>
+                                </property>
+                                <layout>
+                                  <property name="column">1</property>
+                                  <property name="row">2</property>
+                                </layout>
+                              </object>
+                            </child>
                           </object>
                         </child>
                         <child>
@@ -168,12 +279,6 @@
                         </child>
                       </object>
                     </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkButton" id="btnExport">
-                    <property name="label" translatable="yes">Export</property>
-                    <property name="receives-default">1</property>
                   </object>
                 </child>
               </object>

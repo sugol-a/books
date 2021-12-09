@@ -1,6 +1,7 @@
 #pragma once
 
 #include <featuredetector.hpp>
+#include <featuredetectorparams.hpp>
 #include <workerpool.hpp>
 
 namespace worker {
@@ -9,7 +10,8 @@ namespace worker {
             FeatureDetectorPool() { }
             FeatureDetectorPool(size_t n_workers,
                                 std::vector<ft::FitnessMetric> fitness_metrics,
-                                std::vector<float> fitness_weights);
+                                std::vector<float> fitness_weights,
+                                FeatureDetectorParams params = FeatureDetectorParams());
 
             ~FeatureDetectorPool();
 
@@ -28,5 +30,6 @@ namespace worker {
             mutable std::mutex m_mutex;
             size_t m_active_workers;
             std::vector<std::unique_ptr<FeatureDetector>> m_workers;
+            FeatureDetectorParams m_params;
     };
 }

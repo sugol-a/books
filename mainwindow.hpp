@@ -8,6 +8,7 @@
 #include <imagestore.hpp>
 #include <imageloaderpool.hpp>
 #include <featuredetectorpool.hpp>
+#include <featuredetectorparams.hpp>
 #include <imageexporterpool.hpp>
 #include <imagepreview.hpp>
 #include <progresswindow.hpp>
@@ -32,6 +33,8 @@ namespace ui {
             void selected_output_directory(int id);
 
             void margins_changed();
+
+            void update_filter_params();
 
             void begin_import();
             bool import_progress();
@@ -71,6 +74,7 @@ namespace ui {
             worker::ImageLoaderPool* m_imageLoader;
             worker::FeatureDetectorPool* m_featureDetector;
             worker::ImageExporterPool* m_imageExporter;
+            worker::FeatureDetectorParams m_featureDetectorParams;
 
             std::filesystem::path m_exportDirectory;
 
@@ -81,11 +85,15 @@ namespace ui {
 
             Gtk::Button* m_imageDirButton;
             Gtk::Button* m_exportDirButton;
+            Gtk::Button* m_reloadButton;
             Gtk::Button* m_exportButton;
             Gtk::Scale* m_marginScale;
             Gtk::SpinButton* m_layerButton;
             Gtk::CheckButton* m_showFeaturesChk;
             Gtk::CheckButton* m_showFitnessChk;
+            Gtk::Scale* m_blurKernelScale;
+            Gtk::Scale* m_dilateKernelScale;
+            Gtk::Scale* m_thresholdScale;
 
             Gtk::TreeView* m_fileTreeView;
             Glib::RefPtr<Gtk::ListStore> m_fileListStore;

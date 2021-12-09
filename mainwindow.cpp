@@ -13,21 +13,30 @@ namespace ui {
 #endif
         m_imageDirButton = ref_builder->get_widget<Gtk::Button>("btnImageDirectory");
         m_exportDirButton = ref_builder->get_widget<Gtk::Button>("btnExportDirectory");
+        m_reloadButton = ref_builder->get_widget<Gtk::Button>("btnReload");
         m_exportButton = ref_builder->get_widget<Gtk::Button>("btnExport");
         m_marginScale = ref_builder->get_widget<Gtk::Scale>("scaleMargins");
         m_layerButton = ref_builder->get_widget<Gtk::SpinButton>("spinBtnLayer");
         m_showFeaturesChk = ref_builder->get_widget<Gtk::CheckButton>("chkShowFeatures");
         m_showFitnessChk = ref_builder->get_widget<Gtk::CheckButton>("chkShowFitness");
+        m_blurKernelScale = ref_builder->get_widget<Gtk::Scale>("scaleBlurKernel");
+        m_dilateKernelScale = ref_builder->get_widget<Gtk::Scale>("scaleDilate");
+        m_thresholdScale = ref_builder->get_widget<Gtk::Scale>("scaleThreshold");
+
         m_fileTreeView = ref_builder->get_widget<Gtk::TreeView>("filesTreeView");
         m_previewPane = Gtk::Builder::get_widget_derived<ui::ImagePreview>(ref_builder, "preview");
 
         m_imageDirButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::change_input_directory));
         m_exportDirButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::change_output_directory));
+        m_reloadButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::begin_import));
         m_exportButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::begin_export));
         m_marginScale->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::margins_changed));
         m_layerButton->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::change_layer));
         m_showFeaturesChk->signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
         m_showFitnessChk->signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
+        m_blurKernelScale->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::update_filter_params));
+        m_dilateKernelScale->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::update_filter_params));
+        m_thresholdScale->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::update_filter_params));
 
         m_fileListStore = Gtk::ListStore::create(m_fileColumns);
         m_fileTreeView->set_model(m_fileListStore);
@@ -130,7 +139,29 @@ namespace ui {
         m_previewPane->queue_draw();
     }
 
+    void MainWindow::update_filter_params() {
+        size_t threshold = m_thresholdScale->get_value();
+        size_t blur_size = m_blurKernelScale->get_value();
+
+        // Make sure the kernel size is odd
+        if (blur_size % 2 == 0) {
+            blur_size++;
+            m_blurKernelScale->set_value(blur_size);
+        }
+
+        size_t dilate_size = m_dilateKernelScale->get_value();
+
+        m_featureDetectorParams.blur_kernel_size = blur_size;
+        m_featureDetectorParams.dilate_kernel_size = dilate_size;
+        m_featureDetectorParams.threshold = threshold;
+    }
+
     void MainWindow::begin_import() {
+        // If no files have been selected, then there's no work to do
+        if (m_imageStore.images().size() == 0) {
+            return;
+        }
+
         // Automagically determine the number of threads to use for each task
         std::vector<size_t> thread_allocations = worker::thread_allocations({ 2, 1 });
 
@@ -142,10 +173,8 @@ namespace ui {
                 ft::distance_to(util::Point<double>{0, 0}),
                 ft::relative_area(0.5)
             },
-            {
-                2,
-                5
-            });
+            { 2, 5},
+            m_featureDetectorParams);
 
         m_imageLoader->input()->push_vec(m_imageStore.images());
         m_imageLoader->input()->finish();
