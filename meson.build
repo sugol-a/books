@@ -41,6 +41,7 @@ sources = [ 'books.cpp',
             ui_res ]
 
 if build_machine.system() == 'windows' or build_machine.system() == 'cygwin'
+  windows = import('windows')
   sources += [ windows.compile_resources('assets/win32/books.rc') ]
 endif
 
