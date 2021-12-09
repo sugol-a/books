@@ -85,7 +85,10 @@ namespace worker {
         }
 
         image_data.set_features(features);
-        image_data.set_candidate(best_candidate_box(features));
+
+        std::optional<img::ImageData::Feature> candidate = best_candidate_box(features);
+        if (candidate)
+            image_data.set_candidate(candidate.value());
     }
 
     double FeatureDetector::resize_mat(const cv::UMat& src, cv::UMat& dest) {
@@ -115,7 +118,11 @@ namespace worker {
         return 1 / (1 + expf(weighted_sum));
     }
 
-    img::ImageData::Feature& FeatureDetector::best_candidate_box(std::vector<img::ImageData::Feature>& features) {
+    std::optional<img::ImageData::Feature> FeatureDetector::best_candidate_box(std::vector<img::ImageData::Feature>& features) {
+        if (features.size() == 0) {
+            return {};
+        }
+
         // Select the feature with the highest fitness value
         return *std::max_element(features.begin(),
                                  features.end(),

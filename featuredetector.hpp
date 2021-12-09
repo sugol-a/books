@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include <fitnessmetrics.hpp>
 #include <imagedata.hpp>
 #include <worker.hpp>
@@ -21,7 +23,7 @@ namespace worker {
             void find_features(img::ImageData& image_data);
             double resize_mat(const cv::UMat& src, cv::UMat& dest);
             float calculate_fitness(const cv::Mat& mat, const util::Box& box);
-            img::ImageData::Feature& best_candidate_box(std::vector<img::ImageData::Feature>& features);
+            std::optional<img::ImageData::Feature> best_candidate_box(std::vector<img::ImageData::Feature>& features);
 
         private:
             std::vector<ft::FitnessMetric> m_fitness_metrics;
