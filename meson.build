@@ -1,5 +1,5 @@
 project('books', 'cpp',
-        version : '0.2.0',
+        version : '0.2.1',
         default_options : ['warning_level=3', 'cpp_std=c++17', 'c_std=c11'])
 
 if get_option('buildtype').startswith('debug')
@@ -39,6 +39,10 @@ sources = [ 'books.cpp',
             'fitnessmetrics.cpp',
             'util/box.cpp',
             ui_res ]
+
+if build_machine.system() == 'windows' or build_machine.system() == 'cygwin'
+  sources += [ windows.compile_resources('assets/win32/books.rc') ]
+endif
 
 executable('books',
            sources,
