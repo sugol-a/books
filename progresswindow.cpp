@@ -40,13 +40,15 @@ namespace ui {
             m_progress_prev = current_job;
 
             double speed = current_job / double(time_total.count());
-            double time_remaining = double(m_jobs - current_job) / speed;
+            int time_remaining = int(ceil(double(m_jobs - current_job) / (1000000 * speed)));
 
             // Wait for the estimate to stabilise
             if (time_total.count() > 1000000) {
                 std::ostringstream remaining;
-                remaining << int(ceil(time_remaining / 1000000))
-                          << " seconds remaining";
+                remaining << time_remaining
+                          << " second"
+                          << (time_remaining == 1 ? "" : "s")
+                          << " remaining";
 
                 set_text(remaining.str());
             }
