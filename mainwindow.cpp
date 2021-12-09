@@ -73,28 +73,30 @@ namespace ui {
 
     void MainWindow::change_input_directory() {
         // Gtk4 removed the file chooser button, so this is what we get :/
-        m_fileChooser = new Gtk::FileChooserDialog("Select a folder", Gtk::FileChooser::Action::SELECT_FOLDER);
+        m_fileChooser = Gtk::FileChooserNative::create("Select a folder",
+                                                       Gtk::FileChooser::Action::SELECT_FOLDER,
+                                                       "_Open",
+                                                       "_Cancel");
+
         m_fileChooser->set_transient_for(*this);
         m_fileChooser->set_modal(true);
-        m_fileChooser->add_button("_Cancel", Gtk::ResponseType::CANCEL);
-        m_fileChooser->add_button("_Open", Gtk::ResponseType::OK);
         m_fileChooserSignal = m_fileChooser->signal_response().connect(sigc::mem_fun(*this, &MainWindow::selected_input_directory));
-        m_fileChooser->show();    
+        m_fileChooser->show();
     }
 
     void MainWindow::change_output_directory() {
-        m_fileChooser = new Gtk::FileChooserDialog("Select a folder", Gtk::FileChooser::Action::SELECT_FOLDER);
+        m_fileChooser = Gtk::FileChooserNative::create("Select a folder",
+                                                       Gtk::FileChooser::Action::SELECT_FOLDER,
+                                                       "_Open",
+                                                       "_Cancel");
         m_fileChooser->set_transient_for(*this);
         m_fileChooser->set_modal(true);
-        m_fileChooser->add_button("_Cancel", Gtk::ResponseType::CANCEL);
-        m_fileChooser->add_button("_Open", Gtk::ResponseType::OK);
         m_fileChooserSignal = m_fileChooser->signal_response().connect(sigc::mem_fun(*this, &MainWindow::selected_output_directory));
         m_fileChooser->show();
     }
 
     void MainWindow::selected_input_directory(int id) {
-        if (id != Gtk::ResponseType::OK) {
-            delete m_fileChooser;
+        if (id != Gtk::ResponseType::ACCEPT) {
             return;
         }
 
@@ -105,14 +107,12 @@ namespace ui {
         m_imageDirButton->set_label(directory);
 
         m_fileChooserSignal.disconnect();
-        delete m_fileChooser;
 
         begin_import();
     }
 
     void MainWindow::selected_output_directory(int id) {
-        if (id != Gtk::ResponseType::OK) {
-            delete m_fileChooser;
+        if (id != Gtk::ResponseType::ACCEPT) {
             return;
         }
 
@@ -120,7 +120,6 @@ namespace ui {
         m_exportDirButton->set_label(m_exportDirectory.filename().string());
 
         m_fileChooserSignal.disconnect();
-        delete m_fileChooser;
     }
 
     void MainWindow::margins_changed() {

@@ -76,7 +76,7 @@ namespace ui {
 
             Gtk::MessageDialog* m_exportErrorDialog;
 
-            Gtk::FileChooserDialog* m_fileChooser;
+            Glib::RefPtr<Gtk::FileChooserNative> m_fileChooser;
             sigc::connection m_fileChooserSignal;
 
             Gtk::Button* m_imageDirButton;
