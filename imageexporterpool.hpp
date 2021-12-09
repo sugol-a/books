@@ -20,6 +20,8 @@ namespace worker {
             void run_workers() override;
             void join_all() override;
             void signal_done() override;
+            void stop() override;
+            bool stopped() override;
 
         private:
             std::shared_ptr<InputQueue> m_input_queue;
@@ -27,5 +29,6 @@ namespace worker {
             mutable std::mutex m_mutex;
             size_t m_active_workers;
             std::vector<std::unique_ptr<ImageExporter>> m_workers;
+            bool m_stopped;
     };
 }

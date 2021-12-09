@@ -18,6 +18,8 @@ namespace worker {
             void run_workers() override;
             void join_all() override;
             void signal_done() override;
+            void stop() override;
+            bool stopped() override;
 
         private:
             std::size_t m_active_workers;
@@ -25,5 +27,6 @@ namespace worker {
             std::shared_ptr<InputQueue> m_input_queue;
             std::shared_ptr<OutputQueue> m_output_queue;
             std::vector<std::unique_ptr<ImageLoader>> m_workers;
+            bool m_stopped;
     };
 }

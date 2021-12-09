@@ -1,14 +1,17 @@
+#include <iostream>
 #include <progresswindow.hpp>
 
 namespace ui {
     ProgressWindow::ProgressWindow(BaseObjectType* cobject,
                                    const Glib::RefPtr<Gtk::Builder>& ref_builder)
-        : Gtk::Window(cobject) {
+        : Gtk::Dialog(cobject) {
         m_jobs = 0;
+        m_progress_prev = 0;
+        m_time_start = std::chrono::high_resolution_clock::now();
         m_progressbar = ref_builder->get_widget<Gtk::ProgressBar>("progressbar");
+        m_label = ref_builder->get_widget<Gtk::Label>("lblAction");
 
         this->set_modal(true);
-        this->set_decorated(false);
     }
 
     ProgressWindow::~ProgressWindow() {}
@@ -20,12 +23,36 @@ namespace ui {
         return progress_window;
     }
 
+    void ProgressWindow::set_text(const std::string& text) {
+        m_label->set_text(text);
+    }
+
     void ProgressWindow::set_jobs(int n_jobs) {
         m_jobs = n_jobs;
     }
 
     void ProgressWindow::set_progress(int current_job) {
-        double fraction = double(current_job) / double(m_jobs);
+        auto time_now = std::chrono::high_resolution_clock::now();
+        auto time_total = std::chrono::duration_cast<std::chrono::microseconds>(time_now - m_time_start);
+
+        // Calculate the time remaining
+        if (current_job > m_progress_prev) {
+            m_progress_prev = current_job;
+
+            double speed = current_job / double(time_total.count());
+            double time_remaining = double(m_jobs - current_job) / speed;
+
+            // Wait for the estimate to stabilise
+            if (time_total.count() > 1000000) {
+                std::ostringstream remaining;
+                remaining << int(ceil(time_remaining / 1000000))
+                          << " seconds remaining";
+
+                set_text(remaining.str());
+            }
+        }
+
+        float fraction = float(current_job) / float(m_jobs);
         std::ostringstream ss;
         ss << current_job << " / " << m_jobs;
 

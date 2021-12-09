@@ -26,6 +26,8 @@ namespace worker {
             virtual std::shared_ptr<OutputQueue> output() = 0;
             virtual void set_input(std::shared_ptr<InputQueue> in) = 0;
             virtual void set_output(std::shared_ptr<OutputQueue> out) = 0;
+            virtual void stop() = 0;
+            virtual bool stopped() = 0;
     };
 
     /**

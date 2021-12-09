@@ -23,6 +23,8 @@ namespace worker {
             void run_workers() override;
             void join_all() override;
             void signal_done() override;
+            void stop() override;
+            bool stopped() override;
 
         private:
             std::shared_ptr<InputQueue> m_input_queue;
@@ -31,5 +33,6 @@ namespace worker {
             size_t m_active_workers;
             std::vector<std::unique_ptr<FeatureDetector>> m_workers;
             FeatureDetectorParams m_params;
+            bool m_stopped;
     };
 }

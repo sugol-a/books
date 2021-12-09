@@ -1,7 +1,7 @@
-#include <gtkmm.h>
 #include <iostream>
+#include <string>
 
-#include <opencv2/highgui.hpp>
+#include <gtkmm.h>
 
 #include <mainwindow.hpp>
 
@@ -11,39 +11,60 @@ namespace ui {
 #ifdef DEBUG
         std::cout << "THIS IS A DEBUG BUILD" << std::endl;
 #endif
-        m_imageDirButton = ref_builder->get_widget<Gtk::Button>("btnImageDirectory");
-        m_exportDirButton = ref_builder->get_widget<Gtk::Button>("btnExportDirectory");
-        m_reloadButton = ref_builder->get_widget<Gtk::Button>("btnReload");
+        m_importButton = ref_builder->get_widget<Gtk::Button>("btnImport");
         m_exportButton = ref_builder->get_widget<Gtk::Button>("btnExport");
+        m_reloadButton = ref_builder->get_widget<Gtk::Button>("btnReload");
+
         m_marginScale = ref_builder->get_widget<Gtk::Scale>("scaleMargins");
-        m_layerButton = ref_builder->get_widget<Gtk::SpinButton>("spinBtnLayer");
-        m_showFeaturesChk = ref_builder->get_widget<Gtk::CheckButton>("chkShowFeatures");
-        m_showFitnessChk = ref_builder->get_widget<Gtk::CheckButton>("chkShowFitness");
-        m_blurKernelScale = ref_builder->get_widget<Gtk::Scale>("scaleBlurKernel");
-        m_dilateKernelScale = ref_builder->get_widget<Gtk::Scale>("scaleDilate");
-        m_thresholdScale = ref_builder->get_widget<Gtk::Scale>("scaleThreshold");
+        m_showFeaturesSwitch = ref_builder->get_widget<Gtk::Switch>("switchShowFeatures");
+        m_showFitnessSwitch = ref_builder->get_widget<Gtk::Switch>("switchShowFitness");
+
+        m_blurKernelSpin = ref_builder->get_widget<Gtk::SpinButton>("spinBlurKernel");
+        m_dilateKernelSpin = ref_builder->get_widget<Gtk::SpinButton>("spinDilateKernel");
+        m_thresholdSpin = ref_builder->get_widget<Gtk::SpinButton>("spinThreshold");
 
         m_fileTreeView = ref_builder->get_widget<Gtk::TreeView>("filesTreeView");
         m_previewPane = Gtk::Builder::get_widget_derived<ui::ImagePreview>(ref_builder, "preview");
 
-        m_imageDirButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::change_input_directory));
-        m_exportDirButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::change_output_directory));
+        m_importButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::import_button_clicked));
+        m_exportButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::export_button_clicked));
         m_reloadButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::begin_import));
-        m_exportButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::begin_export));
         m_marginScale->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::margins_changed));
-        m_layerButton->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::change_layer));
-        m_showFeaturesChk->signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
-        m_showFitnessChk->signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
-        m_blurKernelScale->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::update_filter_params));
-        m_dilateKernelScale->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::update_filter_params));
-        m_thresholdScale->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::update_filter_params));
+
+        m_showFeaturesSwitch->property_active().signal_changed().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
+        m_showFitnessSwitch->property_active().signal_changed().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
+
+        m_blurKernelSpin->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::update_filter_params));
+        m_dilateKernelSpin->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::update_filter_params));
+        m_thresholdSpin->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::update_filter_params));
 
         m_fileListStore = Gtk::ListStore::create(m_fileColumns);
         m_fileTreeView->set_model(m_fileListStore);
-        m_fileTreeView->append_column("File", m_fileColumns.m_inputName);
-        m_fileTreeView->append_column_editable("Output", m_fileColumns.m_outputName);
+        m_fileTreeView->append_column_editable("File", m_fileColumns.m_outputName);
         m_fileTreeView->append_column_editable("Autocrop", m_fileColumns.m_autoCrop);
-        m_fileTreeView->signal_row_activated().connect(sigc::mem_fun(*this, &MainWindow::selection_changed));
+
+        // Make all of the columns sortable
+        m_fileTreeView->get_column(0)->set_sort_column(m_fileColumns.m_outputName);
+        m_fileTreeView->get_column(1)->set_sort_column(m_fileColumns.m_autoCrop);
+        m_fileTreeView->get_column(0)->set_resizable();
+        m_fileTreeView->get_column(1)->set_resizable();
+
+        // Make the treeview searchable
+        m_fileTreeView->set_search_column(0);
+        m_fileTreeView->set_enable_search();
+        m_fileTreeView->set_search_equal_func([](const Glib::RefPtr<Gtk::TreeModel>&,
+                                                 int col,
+                                                 const Glib::ustring& key,
+                                                 const Gtk::TreeModel::const_iterator& iter) -> bool {
+            // Just check whether the filename contains the key. Default is
+            // to check whether the field starts with the key.
+            std::string name;
+            iter->get_value<std::string>(col, name);
+            return name.find(key) == std::string::npos;
+        });
+
+        // m_fileTreeView->signal_row_activated().connect(sigc::mem_fun(*this, &MainWindow::selection_changed));
+        m_fileTreeView->signal_cursor_changed().connect(sigc::mem_fun(*this, &MainWindow::selection_changed));
 
         m_exportErrorDialog = new Gtk::MessageDialog(*this,
                                                      "Please select an export directory",
@@ -51,6 +72,9 @@ namespace ui {
                                                      Gtk::MessageType::ERROR,
                                                      Gtk::ButtonsType::OK,
                                                      true);
+
+        // Read in the default filter parameters from the UI file
+        update_filter_params();
 
         m_margins = 0;
     }
@@ -66,22 +90,7 @@ namespace ui {
         return mainWindow;
     }
 
-    Gtk::TreeRow MainWindow::selected_row() {
-        auto selection = m_fileTreeView->get_selection();
-        return *selection->get_selected();
-    }
-
-    std::shared_ptr<img::ImageData> MainWindow::selected_image() {
-        auto row = selected_row();
-
-        if (!row)
-            return nullptr;
-
-        return row[m_fileColumns.m_imageData];
-    }
-
-    void MainWindow::change_input_directory() {
-        // Gtk4 removed the file chooser button, so this is what we get :/
+    void MainWindow::import_button_clicked() {
         m_fileChooser = Gtk::FileChooserNative::create("Select a folder",
                                                        Gtk::FileChooser::Action::SELECT_FOLDER,
                                                        "_Open",
@@ -93,15 +102,33 @@ namespace ui {
         m_fileChooser->show();
     }
 
-    void MainWindow::change_output_directory() {
+    void MainWindow::export_button_clicked() {
         m_fileChooser = Gtk::FileChooserNative::create("Select a folder",
                                                        Gtk::FileChooser::Action::SELECT_FOLDER,
                                                        "_Open",
                                                        "_Cancel");
         m_fileChooser->set_transient_for(*this);
         m_fileChooser->set_modal(true);
-        m_fileChooserSignal = m_fileChooser->signal_response().connect(sigc::mem_fun(*this, &MainWindow::selected_output_directory));
+        m_fileChooserSignal = m_fileChooser->signal_response().connect(sigc::mem_fun(*this, &MainWindow::selected_export_directory));
         m_fileChooser->show();
+    }
+
+    std::optional<Gtk::TreeRow> MainWindow::selected_row() {
+        auto selection = m_fileTreeView->get_selection();
+        if (selection && selection->get_selected()) {
+            return *selection->get_selected();
+        } else {
+            return {};
+        }
+    }
+
+    std::shared_ptr<img::ImageData> MainWindow::selected_image() {
+        auto row = selected_row();
+
+        if (!row)
+            return nullptr;
+
+        return row.value()[m_fileColumns.m_imageData];
     }
 
     void MainWindow::selected_input_directory(int id) {
@@ -113,22 +140,21 @@ namespace ui {
 
         m_imageStore.clear();
         m_imageStore.populate(directory);
-        m_imageDirButton->set_label(directory);
 
         m_fileChooserSignal.disconnect();
 
         begin_import();
     }
 
-    void MainWindow::selected_output_directory(int id) {
+    void MainWindow::selected_export_directory(int id) {
         if (id != Gtk::ResponseType::ACCEPT) {
             return;
         }
 
         m_exportDirectory = m_fileChooser->get_file()->get_path();
-        m_exportDirButton->set_label(m_exportDirectory.filename().string());
-
         m_fileChooserSignal.disconnect();
+
+        begin_export();
     }
 
     void MainWindow::margins_changed() {
@@ -140,16 +166,9 @@ namespace ui {
     }
 
     void MainWindow::update_filter_params() {
-        size_t threshold = m_thresholdScale->get_value();
-        size_t blur_size = m_blurKernelScale->get_value();
-
-        // Make sure the kernel size is odd
-        if (blur_size % 2 == 0) {
-            blur_size++;
-            m_blurKernelScale->set_value(blur_size);
-        }
-
-        size_t dilate_size = m_dilateKernelScale->get_value();
+        size_t threshold = m_thresholdSpin->get_value();
+        size_t blur_size = m_blurKernelSpin->get_value();
+        size_t dilate_size = m_dilateKernelSpin->get_value();
 
         m_featureDetectorParams.blur_kernel_size = blur_size;
         m_featureDetectorParams.dilate_kernel_size = dilate_size;
@@ -185,17 +204,31 @@ namespace ui {
         m_imageLoader->run_workers();
         m_featureDetector->run_workers();
 
+        m_fileTreeView->get_selection()->unselect_all();
+
         // Create and display a modal progress window
         m_progressWindow = ProgressWindow::create();
         m_progressWindow->set_jobs(m_imageStore.images().size());
+        m_progressWindow->set_title("Importing images");
         m_progressWindow->set_modal(true);
         m_progressWindow->set_transient_for(*this);
         Glib::signal_idle().connect(sigc::mem_fun(*this, &MainWindow::import_progress));
+
+        m_progressWindow->signal_close_request().connect(sigc::mem_fun(*this, &MainWindow::cancel_import), false);
 
         m_progressWindow->show();
     }
 
     bool MainWindow::import_progress() {
+        if (m_featureDetector->stopped()) {
+            // This operation has been cancelled
+            delete m_progressWindow;
+            delete m_imageLoader;
+            delete m_featureDetector;
+
+            return false;
+        }
+
         m_progressWindow->set_progress(m_featureDetector->output()->size());
 
         // Check if the worker's finished. The result queue may be larger than
@@ -203,18 +236,21 @@ namespace ui {
         if (m_featureDetector->output()->size() >= m_imageStore.images().size()) {
             // Clear the old contents of the list store
             m_fileListStore->clear();
+            //m_fileListStore.reset();
 
             std::shared_ptr<img::ImageData> image_data = nullptr;
             while ((image_data = m_featureDetector->output()->pop()) != nullptr) {
                 std::filesystem::path file_path(image_data->filename());
                 auto row = *(m_fileListStore->append());
 
-                row[m_fileColumns.m_inputName] = file_path.filename().string();
                 row[m_fileColumns.m_outputName] = file_path.filename().string();
                 row[m_fileColumns.m_autoCrop] = true;
                 row[m_fileColumns.m_fullPath] = image_data->filename();
                 row[m_fileColumns.m_imageData] = image_data;
             }
+
+            // Clear the preview until an image is selected
+            m_previewPane->set_image(nullptr);
 
             m_progressWindow->close();
             delete m_progressWindow;
@@ -229,13 +265,14 @@ namespace ui {
         return true;
     }
 
-    void MainWindow::begin_export() {
-        if (m_exportDirectory.empty()) {
-            m_exportErrorDialog->show();
-            m_exportErrorDialog->signal_response().connect(sigc::hide(sigc::mem_fun(*m_exportErrorDialog, &Gtk::Widget::hide)));
-            return;
-        }
+    bool MainWindow::cancel_import() {
+        m_imageLoader->stop();
+        m_featureDetector->stop();
 
+        return true;
+    }
+
+    void MainWindow::begin_export() {
         std::vector<std::pair<std::shared_ptr<img::ImageData>, worker::ExportParameters>> export_data;
 
         auto iter = m_fileListStore->children();
@@ -271,14 +308,21 @@ namespace ui {
         // Create and display a progress window
         m_progressWindow = ProgressWindow::create();
         m_progressWindow->set_jobs(m_imageStore.images().size());
+        m_progressWindow->set_title("Exporting images");
         m_progressWindow->set_modal(true);
         m_progressWindow->set_transient_for(*this);
         Glib::signal_idle().connect(sigc::mem_fun(*this, &MainWindow::export_progress));
+        m_progressWindow->signal_close_request().connect(sigc::mem_fun(*this, &MainWindow::cancel_export), false);
 
         m_progressWindow->show();
     }
 
     bool MainWindow::export_progress() {
+        if (m_imageExporter->stopped()) {
+            delete m_progressWindow;
+            delete m_imageExporter;
+        }
+
         m_progressWindow->set_progress(m_imageExporter->output()->size());
 
         if (m_imageExporter->output()->size() >= m_imageStore.images().size()) {
@@ -297,26 +341,29 @@ namespace ui {
         return true;
     }
 
-    void MainWindow::change_layer() {
+    bool MainWindow::cancel_export() {
+        m_imageExporter->stop();
+
+        return true;
     }
 
     void MainWindow::overlay_toggled() {
-        m_previewPane->show_features(m_showFeaturesChk->get_active());
+        m_previewPane->show_features(m_showFeaturesSwitch->get_active());
 
         // It only makes sense to show fitness scores when features are enabled,
         // so disable fitness scores when they're not
-        if (!m_showFeaturesChk->get_active()) {
-            m_showFitnessChk->set_active(false);
-            m_showFitnessChk->set_sensitive(false);
+        if (!m_showFeaturesSwitch->get_active()) {
+            m_showFitnessSwitch->set_active(false);
+            m_showFitnessSwitch->set_sensitive(false);
         } else {
-            m_showFitnessChk->set_sensitive(true);
+            m_showFitnessSwitch->set_sensitive(true);
         }
 
-        m_previewPane->show_fitness(m_showFitnessChk->get_active());
+        m_previewPane->show_fitness(m_showFitnessSwitch->get_active());
         m_previewPane->queue_draw();
     }
 
-    void MainWindow::selection_changed(const Gtk::TreeModel::Path&, Gtk::TreeViewColumn*) {
+    void MainWindow::selection_changed() {
         update_preview();
     }
 
@@ -332,9 +379,11 @@ namespace ui {
             return;
 
         auto row = selected_row();
-        m_currentImage->load(m_currentImage->filename());
-        m_previewPane->set_image(m_currentImage);
-        m_previewPane->show_crop(row[m_fileColumns.m_autoCrop]);
-        m_previewPane->queue_draw();
+        if (row) {
+            m_currentImage->load(m_currentImage->filename());
+            m_previewPane->set_image(m_currentImage);
+            m_previewPane->show_crop(row.value()[m_fileColumns.m_autoCrop]);
+            m_previewPane->queue_draw();
+        }
     }
 }

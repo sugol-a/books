@@ -3,6 +3,7 @@
 namespace worker {
     ImageExporterPool::ImageExporterPool(size_t n_workers) {
         m_active_workers = n_workers;
+        m_stopped = false;
         m_input_queue = std::make_shared<InputQueue>();
         m_output_queue = std::make_shared<OutputQueue>();
 
@@ -50,5 +51,18 @@ namespace worker {
         if (m_active_workers == 0) {
             m_output_queue->finish();
         }
+    }
+
+    void ImageExporterPool::stop() {
+        m_input_queue->finish();
+        m_input_queue->clear();
+        m_output_queue->finish();
+        m_output_queue->clear();
+
+        m_stopped = true;
+    }
+
+    bool ImageExporterPool::stopped() {
+        return m_stopped;
     }
 }

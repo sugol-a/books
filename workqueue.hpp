@@ -115,6 +115,12 @@ namespace worker {
                 return m_queue.size();
             }
 
+            void clear() {
+                std::lock_guard lock(m_mutex);
+                // Clear the queue by swapping it with an empty queue
+                std::queue<std::shared_ptr<T>>().swap(m_queue);
+            }
+
         private:
             std::atomic_bool m_finished;
             std::mutex m_mutex;
