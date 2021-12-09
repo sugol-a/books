@@ -9,6 +9,10 @@ namespace img {
         load(m_filename);
     }
 
+    ImageData::~ImageData() {
+        unload();
+    }
+
     void ImageData::load(std::string filename) {
         m_filename = filename;
         m_mat = cv::imread(filename);

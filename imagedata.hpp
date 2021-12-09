@@ -19,6 +19,8 @@ namespace img {
              */
             ImageData();
 
+            ~ImageData();
+
             /**
              * Constructs a new ImageData, populated with the contents of `filename`.
              *
