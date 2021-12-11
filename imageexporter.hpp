@@ -6,8 +6,8 @@
 namespace worker {
     struct ExportParameters {
             std::string export_directory;
-            size_t margin;
             std::string output_file;
+            cv::Rect crop;
             bool do_crop;
     };
 
