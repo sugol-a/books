@@ -301,11 +301,13 @@ namespace ui {
             Glib::ustring output_filename = row[m_fileColumns.m_outputName];
             bool do_crop = row[m_fileColumns.m_autoCrop];
             std::shared_ptr<img::ImageData> image_data = row[m_fileColumns.m_imageData];
+            std::shared_ptr<Gdk::Rectangle> r = row[m_fileColumns.m_cropRect];
+            util::Box crop = *r;
 
             worker::ExportParameters params = {
                 m_exportDirectory.string(),
-                m_margins,
                 output_filename,
+                crop,
                 do_crop
             };
 
