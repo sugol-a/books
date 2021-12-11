@@ -74,7 +74,7 @@ namespace worker {
                 m_cv.wait(lock, [this]{ return m_queue.size() > 0 || m_finished; });
 
                 if (m_queue.size() > 0) {
-                    auto data = m_queue.front();
+                    auto data = std::move(m_queue.front());
                     m_queue.pop();
 
                     return data;

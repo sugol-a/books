@@ -33,7 +33,7 @@ namespace worker {
                 // reload it for display/export purposes
                 image_data->unload();
 
-                m_output_queue->push(image_data);
+                m_output_queue->push(std::move(image_data));
             }
 
             // Tell the pool this worker is finished
