@@ -176,8 +176,9 @@ namespace ui {
             // Grow the crop rectangle (bounded by the size of the image)
             x = std::max(0, x - amount);
             y = std::max(0, y - amount);
-            w = std::min(image_data->dimensions().first, w + 2 * amount);
-            h = std::min(image_data->dimensions().second, h + 2 * amount);
+
+            w = std::min(image_data->dimensions().first - x, w + 2 * amount);
+            h = std::min(image_data->dimensions().second - y, h + 2 * amount);
 
             rect->set_x(x);
             rect->set_y(y);
