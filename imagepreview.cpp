@@ -1,4 +1,4 @@
-#include <iostream>
+#include <cmath>
 #include <imagepreview.hpp>
 
 namespace ui {
