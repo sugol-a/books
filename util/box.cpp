@@ -9,11 +9,18 @@ namespace util {
         : m_topLeft({x1, y1}),
           m_bottomRight({x2, y2}) { }
 
-    Box::Box(cv::Rect const& rect) {
+    Box::Box(const cv::Rect& rect) {
         m_topLeft.x = rect.x;
         m_topLeft.y = rect.y;
         m_bottomRight.x = rect.x + rect.width;
         m_bottomRight.y = rect.y + rect.height;
+    }
+
+    Box::Box(const Gdk::Rectangle& rect) {
+        m_topLeft.x = rect.get_x();
+        m_topLeft.y = rect.get_y();
+        m_bottomRight.x = rect.get_x() + rect.get_width();
+        m_bottomRight.y = rect.get_y() + rect.get_height();
     }
 
     void Box::expand(int amount, Box bounds) {

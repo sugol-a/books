@@ -10,7 +10,8 @@ namespace util {
         public:
             Box();
             Box(int x1, int y1, int x2, int y2);
-            Box(cv::Rect const& rect);
+            Box(const cv::Rect& rect);
+            Box(const Gdk::Rectangle& rect);
 
             void expand(int amount, Box bounds);
             Point<int> midpoint() const;
