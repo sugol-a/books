@@ -30,7 +30,20 @@ find /mingw64/lib/gdk-pixbuf-2.0/2.10.0/loaders -name '*.dll' | xargs -I {} cp -
 cp -v /mingw64/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache "$dist_dir/lib/gdk-pixbuf-2.0/2.10.0"
 
 echo " => Copying icons"
-cp -r /mingw64/share/icons/{Adwaita,hicolor} "$dist_dir/share/icons"
+[ -f icons.txt ] && rm icons.txt
+
+# Window icons
+echo "share/icons/Adwaita/scalable/ui/window-close-symbolic.svg" >> icons.txt
+echo "share/icons/Adwaita/scalable/ui/window-maximize-symbolic.svg" >> icons.txt
+echo "share/icons/Adwaita/scalable/ui/window-minimize-symbolic.svg" >> icons.txt
+
+# Other named icons
+find /mingw64/share/icons/Adwaita/scalable | grep -f <(grep 'icon-name' ../assets/ui/*.ui | sed -e 's/.*<property name="icon-name">\(\S*\)<.*/\1.svg/g') | sed -e 's,/mingw64/,,g' >> icons.txt
+
+mkdir "$dist_dir/share/icons/Adwaita"
+cat icons.txt | xargs -I {} dirname {} | sort | uniq | xargs -I {} mkdir -pv "$dist_dir/{}"
+cat icons.txt | xargs -I {} cp "/mingw64/{}" "$dist_dir/{}"
+#cp -r /mingw64/share/icons/{Adwaita,hicolor} "$dist_dir/share/icons"
 
 echo " => Copying schemas"
 cp /mingw64/share/glib-2.0/schemas/gschemas.compiled "$dist_dir/share/glib-2.0/schemas/gschemas.compiled"
