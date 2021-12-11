@@ -38,6 +38,9 @@ namespace ui {
             void selected_input_directory(int id);
             void selected_export_directory(int id);
 
+            void next_image();
+            void prev_image();
+
             void margins_changed(int amount);
 
             void update_filter_params();
@@ -93,6 +96,9 @@ namespace ui {
             Gtk::Button* m_importButton;
             Gtk::Button* m_exportButton;
             Gtk::Button* m_reloadButton;
+
+            Gtk::Button* m_nextImageButton;
+            Gtk::Button* m_prevImageButton;
 
             Gtk::Button* m_marginAddButton;
             Gtk::Button* m_marginSubtractButton;

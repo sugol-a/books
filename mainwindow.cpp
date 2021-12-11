@@ -15,6 +15,9 @@ namespace ui {
         m_exportButton = ref_builder->get_widget<Gtk::Button>("btnExport");
         m_reloadButton = ref_builder->get_widget<Gtk::Button>("btnReload");
 
+        m_nextImageButton = ref_builder->get_widget<Gtk::Button>("btnNextImage");
+        m_prevImageButton = ref_builder->get_widget<Gtk::Button>("btnPrevImage");
+
         m_marginAddButton = ref_builder->get_widget<Gtk::Button>("btnMarginAdd");
         m_marginSubtractButton = ref_builder->get_widget<Gtk::Button>("btnMarginSubtract");
 
@@ -31,6 +34,9 @@ namespace ui {
         m_importButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::import_button_clicked));
         m_exportButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::export_button_clicked));
         m_reloadButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::begin_import));
+
+        m_nextImageButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::next_image));
+        m_prevImageButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::prev_image));
 
         m_marginAddButton->signal_clicked().connect(sigc::bind(sigc::mem_fun(*this, &MainWindow::margins_changed), 5));
         m_marginSubtractButton->signal_clicked().connect(sigc::bind(sigc::mem_fun(*this, &MainWindow::margins_changed), -5));
@@ -159,6 +165,44 @@ namespace ui {
         m_fileChooserSignal.disconnect();
 
         begin_export();
+    }
+
+    void MainWindow::next_image() {
+        auto selection = m_fileTreeView->get_selection();
+        if (!selection) {
+            return;
+        }
+
+        auto iter = selection->get_selected();
+        if (!iter) {
+            return;
+        }
+
+        iter++;
+        if (iter) {
+            selection->select(iter);
+        }
+
+        update_preview();
+    }
+
+    void MainWindow::prev_image() {
+        auto selection = m_fileTreeView->get_selection();
+        if (!selection) {
+            return;
+        }
+
+        auto iter = selection->get_selected();
+        if (!iter) {
+            return;
+        }
+
+        iter--;
+        if (iter) {
+            selection->select(iter);
+        }
+
+        update_preview();
     }
 
     void MainWindow::margins_changed(int amount) {
