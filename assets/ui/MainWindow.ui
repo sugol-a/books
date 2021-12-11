@@ -152,7 +152,7 @@
                       <object class="GtkSpinButton" id="spinDilateKernel">
                         <property name="adjustment">
                           <object class="GtkAdjustment">
-                            <property name="lower">0</property>
+                            <property name="lower">1</property>
                             <property name="upper">50</property>
                             <property name="step-increment">1</property>
                             <property name="value">16</property>
