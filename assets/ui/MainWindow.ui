@@ -249,6 +249,7 @@
               <object class="GtkOverlay">
                 <child type="overlay">
                   <object class="GtkBox">
+                    <property name="can-target">0</property>
                     <property name="hexpand">1</property>
                     <property name="margin-start">8</property>
                     <property name="margin-end">8</property>
