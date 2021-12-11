@@ -15,6 +15,7 @@ namespace ui {
             ImagePreview(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>& ref_builder);
 
             void set_crop(std::shared_ptr<Gdk::Rectangle> rect);
+            void set_features(const std::vector<img::ImageData::Feature>& features);
             void show_crop(bool show);
             void show_features(bool show);
             void show_fitness(bool show);
@@ -25,6 +26,8 @@ namespace ui {
         private:
             void get_visual_offsets(int& x, int& y);
             double get_visual_scale();
+
+            void draw_fill(const Glib::RefPtr<Cairo::Context>& cr, int x_offset, int y_offset, double scale);
             void draw_features(const Glib::RefPtr<Cairo::Context>& cr, int x_offset, int y_offset, double scale);
             void draw_crop(const Glib::RefPtr<Cairo::Context>& cr, int x_offset, int y_offset, double scale);
 
@@ -38,6 +41,7 @@ namespace ui {
             bool m_showFitness;
             CropRect m_cropRect;
             std::shared_ptr<Gdk::Rectangle> m_rect;
+            std::vector<img::ImageData::Feature> m_features;
             CropHandle* m_currentHandle;
             Glib::RefPtr<Gtk::GestureDrag> m_gestureDrag;
     };

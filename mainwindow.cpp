@@ -397,6 +397,7 @@ namespace ui {
 
         auto row = selected_row();
         if (row) {
+            m_previewPane->set_features(m_currentImage->features());
             m_previewPane->set_crop(row.value()[m_fileColumns.m_cropRect]);
             m_previewPane->set_filename(m_currentImage->filename());
             m_previewPane->show_crop(row.value()[m_fileColumns.m_autoCrop]);

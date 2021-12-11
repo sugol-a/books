@@ -25,6 +25,10 @@ namespace ui {
         m_cropRect.set_rect(*rect);
     }
 
+    void ImagePreview::set_features(const std::vector<img::ImageData::Feature>& features) {
+        m_features = features;
+    }
+
     void ImagePreview::show_crop(bool show_crop) {
         m_showCrop = show_crop;
     }
@@ -56,12 +60,13 @@ namespace ui {
         // Overwrite RGBA
         context->set_operator(Cairo::Context::Operator::SOURCE);
 
-        if (m_showFeatures) {
-            draw_features(context, x_offset, y_offset, visual_scale);
-        }
-
         if (m_showCrop) {
             draw_crop(context, x_offset, y_offset, visual_scale);
+        }
+
+        context->set_operator(Cairo::Context::Operator::OVER);
+        if (m_showFeatures) {
+            draw_features(context, x_offset, y_offset, visual_scale);
         }
     }
 
@@ -104,30 +109,35 @@ namespace ui {
     }
 
     void ImagePreview::draw_features(const Glib::RefPtr<Cairo::Context>& cr, int x_offset, int y_offset, double scale) {
-        // auto font = Cairo::ToyFontFace::create("Bitstream Charter",
-        //                                        Cairo::ToyFontFace::Slant::NORMAL,
-        //                                        Cairo::ToyFontFace::Weight::NORMAL);
-        // cr->set_font_face(font);
+        auto font = Cairo::ToyFontFace::create("Cantarell",
+                                               Cairo::ToyFontFace::Slant::NORMAL,
+                                               Cairo::ToyFontFace::Weight::NORMAL);
+        cr->set_font_face(font);
 
-        // for (auto& feature : m_imageData->features()) {
-        //     // Render the feature bounding boxes
-        //     cr->set_source_rgb(1.0, 0.0, 1.0);
-        //     cr->set_line_width(4);
-        //     cr->rectangle(feature.second.top_left().x, feature.second.top_left().y,
-        //                   feature.second.width(), feature.second.height());
+        for (auto& feature : m_features) {
+            Gdk::Rectangle r = feature.second;
 
-        //     cr->stroke();
+            double x, y, w, h;
+            x = (r.get_x() * scale) + x_offset;
+            y = (r.get_y() * scale) + y_offset;
+            w = (r.get_width() * scale);
+            h = (r.get_height() * scale);
 
-        //     if (m_showFitness) {
-        //         // Render the fitness score
-        //         cr->set_source_rgb(1.0, 1.0, 1.0);
-        //         cr->move_to(feature.second.top_left().x,
-        //                     feature.second.top_left().y);
-        //         cr->set_font_size(48);
-        //         cr->show_text(std::to_string(feature.first));
-        //         cr->stroke();
-        //     }
-        // }
+            // Render the feature bounding boxes
+            cr->set_source_rgb(0.382, 0.625, 0.914);
+            cr->set_line_width(1);
+            cr->rectangle(x, y, w, h);
+            cr->stroke();
+
+            if (m_showFitness) {
+                // Render the fitness score
+                cr->set_source_rgb(1.0, 1.0, 1.0);
+                cr->move_to(x, y);
+                cr->set_font_size(12);
+                cr->show_text(std::to_string(feature.first));
+                cr->stroke();
+            }
+        }
     }
 
     void ImagePreview::draw_crop(const Glib::RefPtr<Cairo::Context>& cr, int x_offset, int y_offset, double scale) {
