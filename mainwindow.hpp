@@ -38,7 +38,7 @@ namespace ui {
             void selected_input_directory(int id);
             void selected_export_directory(int id);
 
-            void margins_changed();
+            void margins_changed(int amount);
 
             void update_filter_params();
 
@@ -66,12 +66,14 @@ namespace ui {
                         add(m_autoCrop);
                         add(m_fullPath);
                         add(m_imageData);
+                        add(m_cropRect);
                     }
 
                     Gtk::TreeModelColumn<Glib::ustring> m_outputName;
                     Gtk::TreeModelColumn<bool> m_autoCrop;
                     Gtk::TreeModelColumn<Glib::ustring> m_fullPath;
                     Gtk::TreeModelColumn<std::shared_ptr<img::ImageData>> m_imageData;
+                    Gtk::TreeModelColumn<std::shared_ptr<Gdk::Rectangle>> m_cropRect;
             };
 
             img::ImageStore m_imageStore;
@@ -92,7 +94,8 @@ namespace ui {
             Gtk::Button* m_exportButton;
             Gtk::Button* m_reloadButton;
 
-            Gtk::Scale* m_marginScale;
+            Gtk::Button* m_marginAddButton;
+            Gtk::Button* m_marginSubtractButton;
             Gtk::Switch* m_showFeaturesSwitch;
             Gtk::Switch* m_showFitnessSwitch;
 

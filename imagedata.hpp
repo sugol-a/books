@@ -99,7 +99,19 @@ namespace img {
              */
             Feature& candidate();
 
+            /**
+             * Gets the image filename
+             *
+             * @return Image filename
+             */
             const std::string& filename() const;
+
+            /**
+             * Gets the image dimensions
+             *
+             * @return Image dimensions
+             */
+            const std::pair<int, int>& dimensions() const;
 
         private:
             void update_pixbuf();
@@ -107,6 +119,7 @@ namespace img {
         private:
             cv::Mat m_mat;
             std::string m_filename;
+            std::pair<int, int> m_dimensions;
             Glib::RefPtr<Gdk::Pixbuf> m_pixbuf;
             std::vector<Feature> m_features;
             Feature m_candidate_box;

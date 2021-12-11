@@ -15,12 +15,15 @@ namespace img {
 
     void ImageData::load(std::string filename) {
         m_filename = filename;
-        m_mat = cv::imread(filename);
+        m_mat = cv::imread(filename, cv::IMREAD_COLOR | cv::IMREAD_IGNORE_ORIENTATION);
 
         // Convert the mat to RGB, this will simplify the conversion to a pixbuf
         // (pixbufs only support RGB)
         cv::cvtColor(m_mat, m_mat, cv::COLOR_BGR2RGB);
         update_pixbuf();
+
+        m_dimensions.first = m_mat.size().width;
+        m_dimensions.second = m_mat.size().height;
     }
 
     void ImageData::unload() {
@@ -62,6 +65,10 @@ namespace img {
 
     const std::string& ImageData::filename() const {
         return m_filename;
+    }
+
+    const std::pair<int, int>& ImageData::dimensions() const {
+        return m_dimensions;
     }
 
     void ImageData::update_pixbuf() {

@@ -1,25 +1,28 @@
+#include <iostream>
 #include <imagepreview.hpp>
 
 namespace ui {
     ImagePreview::ImagePreview() {}
 
     ImagePreview::ImagePreview(BaseObjectType* cobject, const Glib::RefPtr<Gtk::Builder>&)
-        : Gtk::DrawingArea(cobject) {
+        : Gtk::Picture(cobject) {
         m_showFeatures = false;
         m_showFitness = false;
         m_showCrop = true;
-        m_imageData = nullptr;
-        m_margins = 0;
 
-        set_draw_func(sigc::mem_fun(*this, &ImagePreview::on_draw));
+        m_currentHandle = nullptr;
+
+        m_gestureDrag = Gtk::GestureDrag::create();
+        m_gestureDrag->signal_drag_begin().connect(sigc::mem_fun(*this, &ImagePreview::on_drag_begin));
+        m_gestureDrag->signal_drag_update().connect(sigc::mem_fun(*this, &ImagePreview::on_drag_update));
+        m_gestureDrag->signal_drag_end().connect(sigc::mem_fun(*this, &ImagePreview::on_drag_end));
+
+        add_controller(m_gestureDrag);
     }
 
-    void ImagePreview::set_image(std::shared_ptr<img::ImageData> image) {
-        m_imageData = image;
-    }
-
-    void ImagePreview::set_margins(size_t margins) {
-        m_margins = margins;
+    void ImagePreview::set_crop(std::shared_ptr<Gdk::Rectangle> rect) {
+        m_rect = rect;
+        m_cropRect.set_rect(*rect);
     }
 
     void ImagePreview::show_crop(bool show_crop) {
@@ -34,79 +37,222 @@ namespace ui {
         m_showFitness = show;
     }
 
-    void ImagePreview::on_draw(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-        if (m_imageData == nullptr) {
-            // We don't have an image buffer, don't draw anything
+    void ImagePreview::snapshot_vfunc(const Glib::RefPtr<Gtk::Snapshot>& snapshot) {
+        // Render the underlying image first
+        Gtk::Picture::snapshot_vfunc(snapshot);
+
+        if (get_file() == nullptr) {
             return;
         }
 
-        // Determine an appropriate image scale, using the maximum dimension of
-        // the image. This way the whole image is always shown in the preview.
-        if (m_imageData->pixbuf()->get_width() > m_imageData->pixbuf()->get_height()) {
-            m_scale = double(width) / m_imageData->pixbuf()->get_width();
-        } else {
-            m_scale = double(height) / m_imageData->pixbuf()->get_height();
-        }
+        const auto allocation = get_allocation();
+        const Gdk::Rectangle rect(0, 0, allocation.get_width(), allocation.get_height());
+        Glib::RefPtr<Cairo::Context> context = snapshot->append_cairo(rect);
 
-        cr->scale(m_scale, m_scale);
-        Gdk::Cairo::set_source_pixbuf(cr, m_imageData->pixbuf());
+        int x_offset, y_offset;
+        double visual_scale = get_visual_scale();
+        get_visual_offsets(x_offset, y_offset);
 
-        // Draw the image buffer
-        cr->rectangle(0, 0, m_imageData->pixbuf()->get_width(), m_imageData->pixbuf()->get_height());
-        cr->fill();
+        // Overwrite RGBA
+        context->set_operator(Cairo::Context::Operator::SOURCE);
 
         if (m_showFeatures) {
-            draw_features(cr);
+            draw_features(context, x_offset, y_offset, visual_scale);
         }
 
         if (m_showCrop) {
-            draw_crop(cr);
+            draw_crop(context, x_offset, y_offset, visual_scale);
         }
     }
 
-    void ImagePreview::draw_features(const Cairo::RefPtr<Cairo::Context>& cr) {
-        auto font = Cairo::ToyFontFace::create("Bitstream Charter",
-                                               Cairo::ToyFontFace::Slant::NORMAL,
-                                               Cairo::ToyFontFace::Weight::NORMAL);
-        cr->set_font_face(font);
+    void ImagePreview::get_visual_offsets(int& x, int& y) {
+        // Adapted from gtk_picture_snapshot() (in gtkpicture.c)
+        int width = get_width();
+        int height = get_height();
+        double ratio = get_paintable()->get_intrinsic_aspect_ratio();
+        double widget_ratio = (double)width / height;
+        double w;
+        double h;
 
-        for (auto& feature : m_imageData->features()) {
-            // Render the feature bounding boxes
-            cr->set_source_rgb(1.0, 0.0, 1.0);
-            cr->set_line_width(4);
-            cr->rectangle(feature.second.top_left().x, feature.second.top_left().y,
-                          feature.second.width(), feature.second.height());
-
-            cr->stroke();
-
-            if (m_showFitness) {
-                // Render the fitness score
-                cr->set_source_rgb(1.0, 1.0, 1.0);
-                cr->move_to(feature.second.top_left().x,
-                            feature.second.top_left().y);
-                cr->set_font_size(48);
-                cr->show_text(std::to_string(feature.first));
-                cr->stroke();
-            }
+        if (ratio > widget_ratio) {
+            w = width;
+            h = width / ratio;
+        } else {
+            w = height * ratio;
+            h = height;
         }
 
+        x = (width - ceil(w)) / 2;
+        y = floor(height - ceil(h)) / 2;
     }
 
-    void ImagePreview::draw_crop(const Cairo::RefPtr<Cairo::Context>& cr) {
-        util::Box crop = m_imageData->candidate().second;
+    double ImagePreview::get_visual_scale() {
+        double scale;
+        int width = get_width();
+        int height = get_height();
+        auto paintable = get_paintable();
+        double ratio = paintable->get_intrinsic_aspect_ratio();
+        double widget_ratio = (double)width / height;
 
-        util::Box bounds;
-        bounds.top_left() = { 0, 0 };
-        bounds.bottom_right() = { m_imageData->pixbuf()->get_width(), m_imageData->pixbuf()->get_height() };
+        if (ratio > widget_ratio) {
+            scale = (double)width / paintable->get_intrinsic_width();
+        } else{
+            scale = (double)height / paintable->get_intrinsic_height();
+        }
 
-        // Apply margins to the crop rect
-        crop.expand(m_margins, bounds);
-        bounds.top_left().scale(m_scale);
-        bounds.bottom_right().scale(m_scale);
+        return scale;
+    }
 
-        cr->set_source_rgb(0.0, 1.0, 0.0);
-        cr->set_line_width(8);
-        cr->rectangle(crop.top_left().x, crop.top_left().y, crop.width(), crop.height());
+    void ImagePreview::draw_features(const Glib::RefPtr<Cairo::Context>& cr, int x_offset, int y_offset, double scale) {
+        // auto font = Cairo::ToyFontFace::create("Bitstream Charter",
+        //                                        Cairo::ToyFontFace::Slant::NORMAL,
+        //                                        Cairo::ToyFontFace::Weight::NORMAL);
+        // cr->set_font_face(font);
+
+        // for (auto& feature : m_imageData->features()) {
+        //     // Render the feature bounding boxes
+        //     cr->set_source_rgb(1.0, 0.0, 1.0);
+        //     cr->set_line_width(4);
+        //     cr->rectangle(feature.second.top_left().x, feature.second.top_left().y,
+        //                   feature.second.width(), feature.second.height());
+
+        //     cr->stroke();
+
+        //     if (m_showFitness) {
+        //         // Render the fitness score
+        //         cr->set_source_rgb(1.0, 1.0, 1.0);
+        //         cr->move_to(feature.second.top_left().x,
+        //                     feature.second.top_left().y);
+        //         cr->set_font_size(48);
+        //         cr->show_text(std::to_string(feature.first));
+        //         cr->stroke();
+        //     }
+        // }
+    }
+
+    void ImagePreview::draw_crop(const Glib::RefPtr<Cairo::Context>& cr, int x_offset, int y_offset, double scale) {
+        Gdk::Rectangle crop = m_cropRect.get_rect();
+
+        // Transform the crop rectangle so that it's relative to this widget's
+        // contents
+        double x1, y1, x2, y2;
+        x1 = (crop.get_x() * scale) + x_offset;
+        y1 = (crop.get_y() * scale) + y_offset;
+        x2 = ((crop.get_x() + crop.get_width()) * scale) + x_offset;
+        y2 = ((crop.get_y() + crop.get_height()) * scale) + y_offset;
+
+        double width, height;
+        width = x2 - x1;
+        height = y2 - y1;
+
+        // Draw a translucent black overlay
+        cr->set_source_rgba(0, 0, 0, 0.5);
+        cr->rectangle(x_offset, y_offset, scale * get_paintable()->get_intrinsic_width(), scale * get_paintable()->get_intrinsic_height());
+        cr->fill();
+
+        // Cut out the crop rectangle
+        cr->set_source_rgba(0, 0, 0, 0);
+        cr->rectangle(x1, y1, width, height);
+        cr->fill();
+
+        // Draw the outer frame of the crop rect
+        cr->set_source_rgba(1, 1, 1, 0.75);
+        cr->rectangle(x1, y1, width, height);
+        cr->set_line_width(2);
         cr->stroke();
+
+        // Draw the 'thirds' inside the crop rect
+        const double third1 = 1.0 / 3.0;
+        const double third2 = 2.0 / 3.0;
+
+        // Along x
+        cr->move_to(x1 + (width * third1), y1);
+        cr->line_to(x1 + (width * third1), y2);
+        cr->move_to(x1 + (width * third2), y1);
+        cr->line_to(x1 + (width * third2), y2);
+
+        // Along y
+        cr->move_to(x1, y1 + (height * third1));
+        cr->line_to(x2, y1 + (height * third1));
+        cr->move_to(x1, y1 + (height * third2));
+        cr->line_to(x2, y1 + (height * third2));
+
+        cr->set_line_width(1);
+        cr->stroke();
+
+        // Draw the handles
+        for (const auto& handle : m_cropRect.handles()) {
+            int x = (handle->x() * scale) + x_offset;
+            int y = (handle->y() * scale) + y_offset;
+
+            if (handle == m_currentHandle) {
+                cr->set_source_rgba(1.0, 1.0, 1.0, 1.0);
+            } else {
+                cr->set_source_rgba(1.0, 1.0, 1.0, 0.75);
+            }
+            cr->arc(x, y, handle->radius(), 0, 2 * M_PI);
+            cr->fill();
+        }
+    }
+
+    void ImagePreview::on_drag_begin(double x, double y) {
+        if (!m_showCrop || !get_file()) {
+            return;
+        }
+
+        double scale = get_visual_scale();
+        int x_offset, y_offset;
+        get_visual_offsets(x_offset, y_offset);
+
+        int xp = (x - x_offset) / scale;
+        int yp = (y - y_offset) / scale;
+
+        m_currentHandle = m_cropRect.handle_at(xp, yp);
+        queue_draw();
+    }
+
+    void ImagePreview::on_drag_update(double dx, double dy) {
+        if (!m_currentHandle || !get_file()) {
+            return;
+        }
+
+        double scale = get_visual_scale();
+        int x_offset, y_offset;
+        get_visual_offsets(x_offset, y_offset);
+
+        double start_x, start_y;
+        m_gestureDrag->get_start_point(start_x, start_y);
+
+        double xpos, ypos;
+        xpos = (start_x + dx - x_offset) / scale;
+        ypos = (start_y + dy - y_offset) / scale;
+
+        int image_width = get_paintable()->get_intrinsic_width();
+        int image_height = get_paintable()->get_intrinsic_height();
+
+        // Make sure the handle doesn't leave the bounds of the image
+        if (xpos < 0) {
+            xpos = 0;
+        } else if (xpos >= image_width) {
+            xpos = image_width - 1;
+        }
+
+        if (ypos < 0) {
+            ypos = 0;
+        } else if (ypos >= image_height) {
+            ypos = image_height - 1;
+        }
+
+        m_currentHandle->set_position(xpos, ypos);
+
+        queue_draw();
+    }
+
+    void ImagePreview::on_drag_end(double, double) {
+        if (get_file() != nullptr) {
+            m_currentHandle = nullptr;
+            *m_rect = m_cropRect.get_rect();
+            queue_draw();
+        }
     }
 }

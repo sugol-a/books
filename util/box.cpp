@@ -75,4 +75,14 @@ namespace util {
 
         return rect;
     }
+
+    Box::operator Gdk::Rectangle() const {
+        Gdk::Rectangle rect;
+        rect.set_x(m_topLeft.x);
+        rect.set_y(m_topLeft.y);
+        rect.set_width(width());
+        rect.set_height(height());
+
+        return rect;
+    }
 }

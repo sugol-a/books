@@ -15,7 +15,9 @@ namespace ui {
         m_exportButton = ref_builder->get_widget<Gtk::Button>("btnExport");
         m_reloadButton = ref_builder->get_widget<Gtk::Button>("btnReload");
 
-        m_marginScale = ref_builder->get_widget<Gtk::Scale>("scaleMargins");
+        m_marginAddButton = ref_builder->get_widget<Gtk::Button>("btnMarginAdd");
+        m_marginSubtractButton = ref_builder->get_widget<Gtk::Button>("btnMarginSubtract");
+
         m_showFeaturesSwitch = ref_builder->get_widget<Gtk::Switch>("switchShowFeatures");
         m_showFitnessSwitch = ref_builder->get_widget<Gtk::Switch>("switchShowFitness");
 
@@ -29,7 +31,9 @@ namespace ui {
         m_importButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::import_button_clicked));
         m_exportButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::export_button_clicked));
         m_reloadButton->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::begin_import));
-        m_marginScale->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::margins_changed));
+
+        m_marginAddButton->signal_clicked().connect(sigc::bind(sigc::mem_fun(*this, &MainWindow::margins_changed), 5));
+        m_marginSubtractButton->signal_clicked().connect(sigc::bind(sigc::mem_fun(*this, &MainWindow::margins_changed), -5));
 
         m_showFeaturesSwitch->property_active().signal_changed().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
         m_showFitnessSwitch->property_active().signal_changed().connect(sigc::mem_fun(*this, &MainWindow::overlay_toggled));
@@ -157,12 +161,31 @@ namespace ui {
         begin_export();
     }
 
-    void MainWindow::margins_changed() {
-        m_margins = m_marginScale->get_value();
-        auto image = selected_image();
+    void MainWindow::margins_changed(int amount) {
+        for (auto row : m_fileListStore->children()) {
+            std::shared_ptr<Gdk::Rectangle> rect = row[m_fileColumns.m_cropRect];
+            std::shared_ptr<img::ImageData> image_data = row[m_fileColumns.m_imageData];
 
-        m_previewPane->set_margins(m_margins);
-        m_previewPane->queue_draw();
+            int x, y, w, h;
+
+            x = rect->get_x();
+            y = rect->get_y();
+            w = rect->get_width();
+            h = rect->get_height();
+
+            // Grow the crop rectangle (bounded by the size of the image)
+            x = std::max(0, x - amount);
+            y = std::max(0, y - amount);
+            w = std::min(image_data->dimensions().first, w + 2 * amount);
+            h = std::min(image_data->dimensions().second, h + 2 * amount);
+
+            rect->set_x(x);
+            rect->set_y(y);
+            rect->set_width(w);
+            rect->set_height(h);
+        }
+
+        update_preview();
     }
 
     void MainWindow::update_filter_params() {
@@ -236,7 +259,6 @@ namespace ui {
         if (m_featureDetector->output()->size() >= m_imageStore.images().size()) {
             // Clear the old contents of the list store
             m_fileListStore->clear();
-            //m_fileListStore.reset();
 
             std::shared_ptr<img::ImageData> image_data = nullptr;
             while ((image_data = m_featureDetector->output()->pop()) != nullptr) {
@@ -247,10 +269,8 @@ namespace ui {
                 row[m_fileColumns.m_autoCrop] = true;
                 row[m_fileColumns.m_fullPath] = image_data->filename();
                 row[m_fileColumns.m_imageData] = image_data;
+                row[m_fileColumns.m_cropRect] = std::make_shared<Gdk::Rectangle>(image_data->candidate().second);
             }
-
-            // Clear the preview until an image is selected
-            m_previewPane->set_image(nullptr);
 
             m_progressWindow->close();
             delete m_progressWindow;
@@ -368,22 +388,15 @@ namespace ui {
     }
 
     void MainWindow::update_preview() {
-        // Unload the currently loaded image
-        if (m_currentImage) {
-            m_currentImage->unload();
-        }
-
-        // Load the new image
         m_currentImage = selected_image();
         if (!m_currentImage)
             return;
 
         auto row = selected_row();
         if (row) {
-            m_currentImage->load(m_currentImage->filename());
-            m_previewPane->set_image(m_currentImage);
+            m_previewPane->set_crop(row.value()[m_fileColumns.m_cropRect]);
+            m_previewPane->set_filename(m_currentImage->filename());
             m_previewPane->show_crop(row.value()[m_fileColumns.m_autoCrop]);
-            m_previewPane->queue_draw();
         }
     }
 }
