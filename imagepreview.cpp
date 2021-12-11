@@ -1,4 +1,3 @@
-#include <cmath>
 #include <imagepreview.hpp>
 
 namespace ui {
@@ -200,7 +199,7 @@ namespace ui {
             } else {
                 cr->set_source_rgba(1.0, 1.0, 1.0, 0.75);
             }
-            cr->arc(x, y, handle->radius(), 0, 2 * M_PI);
+            cr->arc(x, y, handle->radius(), 0, 2 * G_PI);
             cr->fill();
         }
     }
