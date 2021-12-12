@@ -73,7 +73,6 @@ namespace ui {
             return name.find(key) == std::string::npos;
         });
 
-        // m_fileTreeView->signal_row_activated().connect(sigc::mem_fun(*this, &MainWindow::selection_changed));
         m_fileTreeView->signal_cursor_changed().connect(sigc::mem_fun(*this, &MainWindow::selection_changed));
 
         m_exportErrorDialog = new Gtk::MessageDialog(*this,
@@ -302,6 +301,10 @@ namespace ui {
         // Check if the worker's finished. The result queue may be larger than
         // the actual number of images due to sentinel values
         if (m_featureDetector->output()->size() >= m_imageStore.images().size()) {
+            // Temporarily unset the model so we don't get cursor-changed
+            // signals while populating the treeview
+            m_fileTreeView->unset_model();
+
             // Clear the old contents of the list store
             m_fileListStore->clear();
 
@@ -317,7 +320,7 @@ namespace ui {
                 row[m_fileColumns.m_cropRect] = std::make_shared<Gdk::Rectangle>(image_data->candidate().second);
             }
 
-            m_progressWindow->close();
+            m_fileTreeView->set_model(m_fileListStore);
             delete m_progressWindow;
 
             delete m_imageLoader;
