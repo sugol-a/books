@@ -45,7 +45,8 @@ namespace ui {
             // Wait for the estimate to stabilise
             if (time_total.count() > 1000000) {
                 std::ostringstream remaining;
-                remaining << time_remaining
+                remaining << "About "
+                          << time_remaining
                           << " second"
                           << (time_remaining == 1 ? "" : "s")
                           << " remaining";
