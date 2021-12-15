@@ -8,12 +8,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Sugol"
             VALUE "FileDescription", "Books"
-            VALUE "FileVersion", "0.2.1"
+            VALUE "FileVersion", "0.2.2"
             VALUE "InternalName", "Books"
             VALUE "LegalCopyright", "al (al@sugol.org)"
             VALUE "OriginalFilename", "books.exe"
             VALUE "ProductName", "Books"
-            VALUE "ProductVersion", "0.2.1"
+            VALUE "ProductVersion", "0.2.2"
         END
     END
     BLOCK "VarFileInfo"
