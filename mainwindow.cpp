@@ -21,6 +21,7 @@ namespace ui {
         m_marginAddButton = ref_builder->get_widget<Gtk::Button>("btnMarginAdd");
         m_marginSubtractButton = ref_builder->get_widget<Gtk::Button>("btnMarginSubtract");
 
+        m_rejectionScale = ref_builder->get_widget<Gtk::Scale>("scaleRejection");
         m_showFeaturesSwitch = ref_builder->get_widget<Gtk::Switch>("switchShowFeatures");
         m_showFitnessSwitch = ref_builder->get_widget<Gtk::Switch>("switchShowFitness");
 
@@ -51,11 +52,11 @@ namespace ui {
         m_fileListStore = Gtk::ListStore::create(m_fileColumns);
         m_fileTreeView->set_model(m_fileListStore);
         m_fileTreeView->append_column_editable("File", m_fileColumns.m_outputName);
-        m_fileTreeView->append_column_editable("Autocrop", m_fileColumns.m_autoCrop);
+        m_fileTreeView->append_column_editable("Crop", m_fileColumns.m_doCrop);
 
         // Make all of the columns sortable
         m_fileTreeView->get_column(0)->set_sort_column(m_fileColumns.m_outputName);
-        m_fileTreeView->get_column(1)->set_sort_column(m_fileColumns.m_autoCrop);
+        m_fileTreeView->get_column(1)->set_sort_column(m_fileColumns.m_doCrop);
         m_fileTreeView->get_column(0)->set_resizable();
         m_fileTreeView->get_column(1)->set_resizable();
 
@@ -251,8 +252,10 @@ namespace ui {
         // Automagically determine the number of threads to use for each task
         std::vector<size_t> thread_allocations = worker::thread_allocations({ 2, 1 });
 
+#ifdef DEBUG
         std::cout << "Using " << thread_allocations[0] << " threads for image loading" << std::endl;
         std::cout << "Using " << thread_allocations[1] << " threads for feature detection" << std::endl;
+#endif
 
         m_imageLoader = new worker::ImageLoaderPool(thread_allocations[0]);
         m_featureDetector = new worker::FeatureDetectorPool(thread_allocations[1], {
@@ -314,7 +317,7 @@ namespace ui {
                 auto row = *(m_fileListStore->append());
 
                 row[m_fileColumns.m_outputName] = file_path.filename().string();
-                row[m_fileColumns.m_autoCrop] = true;
+                row[m_fileColumns.m_doCrop] = image_data->candidate().second.area() > 0 && image_data->candidate().first > m_rejectionScale->get_value();
                 row[m_fileColumns.m_fullPath] = image_data->filename();
                 row[m_fileColumns.m_imageData] = image_data;
                 row[m_fileColumns.m_cropRect] = std::make_shared<Gdk::Rectangle>(image_data->candidate().second);
@@ -346,7 +349,7 @@ namespace ui {
         auto iter = m_fileListStore->children();
         for (auto& row : iter) {
             Glib::ustring output_filename = row[m_fileColumns.m_outputName];
-            bool do_crop = row[m_fileColumns.m_autoCrop];
+            bool do_crop = row[m_fileColumns.m_doCrop];
             std::shared_ptr<img::ImageData> image_data = row[m_fileColumns.m_imageData];
             std::shared_ptr<Gdk::Rectangle> r = row[m_fileColumns.m_cropRect];
             util::Box crop = *r;
@@ -447,7 +450,7 @@ namespace ui {
             m_previewPane->set_features(m_currentImage->features());
             m_previewPane->set_crop(row.value()[m_fileColumns.m_cropRect]);
             m_previewPane->set_filename(m_currentImage->filename());
-            m_previewPane->show_crop(row.value()[m_fileColumns.m_autoCrop]);
+            m_previewPane->show_crop(row.value()[m_fileColumns.m_doCrop]);
         }
     }
 }

@@ -66,14 +66,14 @@ namespace ui {
                 public:
                     ImageModelColumns() {
                         add(m_outputName);
-                        add(m_autoCrop);
+                        add(m_doCrop);
                         add(m_fullPath);
                         add(m_imageData);
                         add(m_cropRect);
                     }
 
                     Gtk::TreeModelColumn<Glib::ustring> m_outputName;
-                    Gtk::TreeModelColumn<bool> m_autoCrop;
+                    Gtk::TreeModelColumn<bool> m_doCrop;
                     Gtk::TreeModelColumn<Glib::ustring> m_fullPath;
                     Gtk::TreeModelColumn<std::shared_ptr<img::ImageData>> m_imageData;
                     Gtk::TreeModelColumn<std::shared_ptr<Gdk::Rectangle>> m_cropRect;
@@ -102,6 +102,7 @@ namespace ui {
 
             Gtk::Button* m_marginAddButton;
             Gtk::Button* m_marginSubtractButton;
+            Gtk::Scale*  m_rejectionScale;
             Gtk::Switch* m_showFeaturesSwitch;
             Gtk::Switch* m_showFitnessSwitch;
 
