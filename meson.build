@@ -9,7 +9,7 @@ endif
 deps = [
   dependency('opencv4'),
   dependency('gtkmm-4.0'),
-  dependency('cairomm-1.0'),
+  dependency('cairomm-1.16'),
   dependency('threads')
 ]
 
