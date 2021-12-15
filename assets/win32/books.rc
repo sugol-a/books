@@ -10,7 +10,7 @@ BEGIN
             VALUE "FileDescription", "Books"
             VALUE "FileVersion", "0.2.2"
             VALUE "InternalName", "Books"
-            VALUE "LegalCopyright", "al (al@sugol.org)"
+            VALUE "LegalCopyright", "al (alister@sugol.org)"
             VALUE "OriginalFilename", "books.exe"
             VALUE "ProductName", "Books"
             VALUE "ProductVersion", "0.2.2"
