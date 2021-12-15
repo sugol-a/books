@@ -48,25 +48,38 @@ namespace ui {
             return;
         }
 
-        const auto allocation = get_allocation();
-        const Gdk::Rectangle rect(0, 0, allocation.get_width(), allocation.get_height());
-        Glib::RefPtr<Cairo::Context> context = snapshot->append_cairo(rect);
-
+        // Get the offset of the image content
         int x_offset, y_offset;
         double visual_scale = get_visual_scale();
         get_visual_offsets(x_offset, y_offset);
+
+        // Gtkmm doesn't seem to expose gtk_snapshot_translate, so we need to
+        // drop to the C api here
+        GtkSnapshot* c_snapshot = snapshot->gobj();
+        graphene_point_t pt = {
+            (float)x_offset, (float)y_offset
+        };
+
+        gtk_snapshot_save(c_snapshot);
+        gtk_snapshot_translate(c_snapshot, &pt);
+
+        const auto allocation = get_allocation();
+        const Gdk::Rectangle rect(0, 0, allocation.get_width(), allocation.get_height());
+        Glib::RefPtr<Cairo::Context> context = snapshot->append_cairo(rect);
 
         // Overwrite RGBA
         context->set_operator(Cairo::Context::Operator::SOURCE);
 
         if (m_showCrop) {
-            draw_crop(context, x_offset, y_offset, visual_scale);
+            draw_crop(context, visual_scale);
         }
 
         context->set_operator(Cairo::Context::Operator::OVER);
         if (m_showFeatures) {
-            draw_features(context, x_offset, y_offset, visual_scale);
+            draw_features(context, visual_scale);
         }
+
+        gtk_snapshot_restore(c_snapshot);
     }
 
     void ImagePreview::get_visual_offsets(int& x, int& y) {
@@ -107,7 +120,7 @@ namespace ui {
         return scale;
     }
 
-    void ImagePreview::draw_features(const Glib::RefPtr<Cairo::Context>& cr, int x_offset, int y_offset, double scale) {
+    void ImagePreview::draw_features(const Glib::RefPtr<Cairo::Context>& cr, double scale) {
         auto font = Cairo::ToyFontFace::create("Cantarell",
                                                Cairo::ToyFontFace::Slant::NORMAL,
                                                Cairo::ToyFontFace::Weight::NORMAL);
@@ -117,10 +130,10 @@ namespace ui {
             Gdk::Rectangle r = feature.second;
 
             double x, y, w, h;
-            x = (r.get_x() * scale) + x_offset;
-            y = (r.get_y() * scale) + y_offset;
-            w = (r.get_width() * scale);
-            h = (r.get_height() * scale);
+            x = r.get_x() * scale;
+            y = r.get_y() * scale;
+            w = r.get_width() * scale;
+            h = r.get_height() * scale;
 
             // Render the feature bounding boxes
             cr->set_source_rgb(0.382, 0.625, 0.914);
@@ -139,16 +152,16 @@ namespace ui {
         }
     }
 
-    void ImagePreview::draw_crop(const Glib::RefPtr<Cairo::Context>& cr, int x_offset, int y_offset, double scale) {
+    void ImagePreview::draw_crop(const Glib::RefPtr<Cairo::Context>& cr, double scale) {
         Gdk::Rectangle crop = m_cropRect.get_rect();
 
         // Transform the crop rectangle so that it's relative to this widget's
         // contents
         double x1, y1, x2, y2;
-        x1 = (crop.get_x() * scale) + x_offset;
-        y1 = (crop.get_y() * scale) + y_offset;
-        x2 = ((crop.get_x() + crop.get_width()) * scale) + x_offset;
-        y2 = ((crop.get_y() + crop.get_height()) * scale) + y_offset;
+        x1 = crop.get_x() * scale;
+        y1 = crop.get_y() * scale;
+        x2 = (crop.get_x() + crop.get_width()) * scale;
+        y2 = (crop.get_y() + crop.get_height()) * scale;
 
         double width, height;
         width = x2 - x1;
@@ -156,7 +169,7 @@ namespace ui {
 
         // Draw a translucent black overlay
         cr->set_source_rgba(0, 0, 0, 0.5);
-        cr->rectangle(x_offset, y_offset, scale * get_paintable()->get_intrinsic_width(), scale * get_paintable()->get_intrinsic_height());
+        cr->rectangle(0, 0, scale * get_paintable()->get_intrinsic_width(), scale * get_paintable()->get_intrinsic_height());
         cr->fill();
 
         // Cut out the crop rectangle
@@ -191,8 +204,8 @@ namespace ui {
 
         // Draw the handles
         for (const auto& handle : m_cropRect.handles()) {
-            int x = (handle->x() * scale) + x_offset;
-            int y = (handle->y() * scale) + y_offset;
+            int x = handle->x() * scale;
+            int y = handle->y() * scale;
 
             if (handle == m_currentHandle) {
                 cr->set_source_rgba(1.0, 1.0, 1.0, 1.0);

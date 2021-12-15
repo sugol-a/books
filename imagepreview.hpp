@@ -27,8 +27,8 @@ namespace ui {
             void get_visual_offsets(int& x, int& y);
             double get_visual_scale();
 
-            void draw_features(const Glib::RefPtr<Cairo::Context>& cr, int x_offset, int y_offset, double scale);
-            void draw_crop(const Glib::RefPtr<Cairo::Context>& cr, int x_offset, int y_offset, double scale);
+            void draw_features(const Glib::RefPtr<Cairo::Context>& cr, double scale);
+            void draw_crop(const Glib::RefPtr<Cairo::Context>& cr, double scale);
 
             void on_drag_begin(double x, double y);
             void on_drag_update(double dx, double dy);
