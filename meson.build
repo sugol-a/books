@@ -27,7 +27,7 @@ sources = [ ui_res ]
 
 subdir('src')
 
-if build_machine.system() == 'windows' or build_machine.system() == 'cygwin'
+if host_machine.system() == 'windows' or host_machine.system() == 'cygwin'
   windows = import('windows')
   sources += [ windows.compile_resources('data/win32/books.rc') ]
 endif
