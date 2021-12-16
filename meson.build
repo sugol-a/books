@@ -13,7 +13,7 @@ deps = [
   dependency('threads')
 ]
 
-inc = include_directories('.')
+inc = include_directories('src')
 
 gnome = import('gnome')
 
@@ -23,24 +23,9 @@ ui_res = gnome.compile_resources(
   source_dir: 'assets',
   c_name: 'ui_res')
 
-sources = [ 'books.cpp',
-            'mainwindow.cpp',
-            'progresswindow.cpp',
-            'imagepreview.cpp',
-            'croprect.cpp',
-            'crophandle.cpp',
-            'imageloader.cpp',
-            'imageloaderpool.cpp',
-            'imagedata.cpp',
-            'imageexporter.cpp',
-            'imageexporterpool.cpp',
-            'workerpool.cpp',
-            'imagestore.cpp',
-            'featuredetector.cpp',
-            'featuredetectorpool.cpp',
-            'fitnessmetrics.cpp',
-            'util/box.cpp',
-            ui_res ]
+sources = [ ui_res ]
+
+subdir('src')
 
 if build_machine.system() == 'windows' or build_machine.system() == 'cygwin'
   windows = import('windows')
