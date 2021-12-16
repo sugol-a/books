@@ -19,8 +19,8 @@ gnome = import('gnome')
 
 ui_res = gnome.compile_resources(
   'ui-resources',
-  'assets/ui-resources.xml',
-  source_dir: 'assets',
+  'data/ui-resources.xml',
+  source_dir: 'data',
   c_name: 'ui_res')
 
 sources = [ ui_res ]
@@ -29,7 +29,7 @@ subdir('src')
 
 if build_machine.system() == 'windows' or build_machine.system() == 'cygwin'
   windows = import('windows')
-  sources += [ windows.compile_resources('assets/win32/books.rc') ]
+  sources += [ windows.compile_resources('data/win32/books.rc') ]
 endif
 
 executable('books',

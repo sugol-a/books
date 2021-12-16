@@ -1,6 +1,5 @@
 build/
 builddir/
-data/
 output/
 *.code-workspace
 .cache
