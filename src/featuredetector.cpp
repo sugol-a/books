@@ -9,31 +9,29 @@
 namespace worker {
     // TODO: Ensure that fitness_metrics and fitness_metric_weights have the
     // same size
-    FeatureDetector::FeatureDetector(std::shared_ptr<InputQueue> input_queue,
-                                     std::shared_ptr<OutputQueue> output_queue,
-                                     const std::vector<ft::FitnessMetric>& fitness_metrics,
+    FeatureDetector::FeatureDetector(const std::vector<ft::FitnessMetric>& fitness_metrics,
                                      const std::vector<float>& fitness_metric_weights,
                                      const FeatureDetectorParams& params)
         : m_fitness_metrics(fitness_metrics),
           m_fitness_weights(fitness_metric_weights),
           m_params(params) {
-        set_input_queue(input_queue);
-        set_output_queue(output_queue);
     }
 
     void FeatureDetector::run(IWorkerPool* wp) {
         auto work_fn = [=] {
             FeatureDetectorPool* worker_pool = static_cast<FeatureDetectorPool*>(wp);
+            std::shared_ptr<InputQueue> input_queue = worker_pool->input();
+            std::shared_ptr<OutputQueue> output_queue = worker_pool->output();
+
             std::shared_ptr<img::ImageData> image_data = nullptr;
 
-            while ((image_data = m_input_queue->pop()) != nullptr) {
+            while ((image_data = input_queue->pop()) != nullptr) {
                 find_features(*image_data);
 
                 // We're done with the image data for now, we only need to
                 // reload it for display/export purposes
                 image_data->unload();
-
-                m_output_queue->push(std::move(image_data));
+                output_queue->push(std::move(image_data));
             }
 
             // Tell the pool this worker is finished

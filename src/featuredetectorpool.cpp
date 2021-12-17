@@ -12,9 +12,7 @@ namespace worker {
         m_output_queue = std::make_shared<OutputQueue>();
 
         for (size_t i = 0; i < n_workers; i++) {
-            m_workers.push_back(std::make_unique<FeatureDetector>(m_input_queue,
-                                                                  m_output_queue,
-                                                                  fitness_metrics,
+            m_workers.push_back(std::make_unique<FeatureDetector>(fitness_metrics,
                                                                   fitness_weights,
                                                                   m_params));
         }
@@ -34,10 +32,6 @@ namespace worker {
 
     void FeatureDetectorPool::set_input(std::shared_ptr<InputQueue> in) {
         m_input_queue = in;
-
-        for (auto& worker : m_workers) {
-            worker->set_input_queue(m_input_queue);
-        }
     }
 
     void FeatureDetectorPool::set_output(std::shared_ptr<OutputQueue> out) {

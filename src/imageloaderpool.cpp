@@ -9,7 +9,7 @@ namespace worker {
 
         // Create the workers
         for (size_t i = 0; i < n_workers; i++) {
-            m_workers.push_back(std::make_unique<ImageLoader>(m_input_queue, m_output_queue));
+            m_workers.push_back(std::make_unique<ImageLoader>());
         }
     }
 

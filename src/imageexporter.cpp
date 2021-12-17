@@ -6,18 +6,15 @@
 namespace fs { using path = std::filesystem::path; }
 
 namespace worker {
-    ImageExporter::ImageExporter(std::shared_ptr<InputQueue> input_queue,
-                                 std::shared_ptr<OutputQueue> output_queue) {
-        set_input_queue(input_queue);
-        set_output_queue(output_queue);
-    }
-
     void ImageExporter::run(IWorkerPool* wp) {
         auto work_fn = [=] {
-            auto worker_pool = static_cast<ImageExporterPool*>(wp);
+            ImageExporterPool* worker_pool = static_cast<ImageExporterPool*>(wp);
+            std::shared_ptr<InputQueue> input_queue = worker_pool->input();
+            std::shared_ptr<OutputQueue> output_queue = worker_pool->output();
+
             std::shared_ptr<std::pair<std::shared_ptr<img::ImageData>, ExportParameters>> image = nullptr;
 
-            while ((image = m_input_queue->pop()) != nullptr) {
+            while ((image = input_queue->pop()) != nullptr) {
                 auto image_data = image->first;
                 auto params = image->second;
                 util::Box crop = params.crop;
@@ -37,7 +34,7 @@ namespace worker {
                 cv::imwrite(output_path.string(), output_image);
                 image_data->unload();
 
-                m_output_queue->push(nullptr);
+                output_queue->push(nullptr);
             }
 
             worker_pool->signal_done();

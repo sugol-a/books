@@ -12,9 +12,7 @@ namespace worker {
         public:
             const double CV_IMAGE_TARGET_DIMENSION = 400.0;
 
-            FeatureDetector(std::shared_ptr<InputQueue> input_queue,
-                            std::shared_ptr<OutputQueue> output_queue,
-                            const std::vector<ft::FitnessMetric>& fitness_metrics,
+            FeatureDetector(const std::vector<ft::FitnessMetric>& fitness_metrics,
                             const std::vector<float>& fitness_metric_weights,
                             const FeatureDetectorParams& params);
 

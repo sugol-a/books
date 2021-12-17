@@ -8,7 +8,7 @@ namespace worker {
         m_output_queue = std::make_shared<OutputQueue>();
 
         for (size_t i = 0; i < n_workers; i++) {
-            m_workers.push_back(std::make_unique<ImageExporter>(m_input_queue, m_output_queue));
+            m_workers.push_back(std::make_unique<ImageExporter>());
         }
     }
 
