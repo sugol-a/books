@@ -7,9 +7,6 @@ namespace worker {
                                              FeatureDetectorParams params)
         : m_params(params) {
         m_active_workers = n_workers;
-        m_stopped = false;
-        m_input_queue = std::make_shared<InputQueue>();
-        m_output_queue = std::make_shared<OutputQueue>();
 
         for (size_t i = 0; i < n_workers; i++) {
             m_workers.push_back(std::make_unique<FeatureDetector>(fitness_metrics,
@@ -18,57 +15,9 @@ namespace worker {
         }
     }
 
-    FeatureDetectorPool::~FeatureDetectorPool() {
-        join_all();
-    }
-
-    std::shared_ptr<FeatureDetectorPool::InputQueue> FeatureDetectorPool::input() {
-        return m_input_queue;
-    }
-
-    std::shared_ptr<FeatureDetectorPool::OutputQueue> FeatureDetectorPool::output() {
-        return m_output_queue;
-    }
-
-    void FeatureDetectorPool::set_input(std::shared_ptr<InputQueue> in) {
-        m_input_queue = in;
-    }
-
-    void FeatureDetectorPool::set_output(std::shared_ptr<OutputQueue> out) {
-        m_output_queue = out;
-    }
-
     void FeatureDetectorPool::run_workers() {
         for (auto& worker : m_workers) {
             worker->run(this);
         }
-    }
-
-    void FeatureDetectorPool::join_all() {
-        for (auto& worker : m_workers) {
-            worker->join();
-        }
-    }
-
-    void FeatureDetectorPool::signal_done() {
-        std::lock_guard lock(m_mutex);
-        m_active_workers--;
-
-        if (m_active_workers == 0) {
-            m_output_queue->finish();
-        }
-    }
-
-    void FeatureDetectorPool::stop() {
-        m_input_queue->finish();
-        m_input_queue->clear();
-        m_output_queue->finish();
-        m_output_queue->clear();
-
-        m_stopped = true;
-    }
-
-    bool FeatureDetectorPool::stopped() {
-        return m_stopped;
     }
 }

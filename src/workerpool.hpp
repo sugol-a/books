@@ -21,13 +21,105 @@ namespace worker {
             using InputQueue = typename W::InputQueue;
             using OutputQueue = typename W::OutputQueue;
 
-            virtual ~WorkerPool() { };
-            virtual std::shared_ptr<InputQueue> input() = 0;
-            virtual std::shared_ptr<OutputQueue> output() = 0;
-            virtual void set_input(std::shared_ptr<InputQueue> in) = 0;
-            virtual void set_output(std::shared_ptr<OutputQueue> out) = 0;
-            virtual void stop() = 0;
-            virtual bool stopped() = 0;
+            WorkerPool<W>() {
+                m_input_queue = std::make_shared<InputQueue>();
+                m_output_queue = std::make_shared<OutputQueue>();
+
+                m_stopped = false;
+            }
+
+            virtual ~WorkerPool() {
+                join_all();
+            };
+
+            /**
+             * Gets the input queue associated with this worker pool
+             *
+             * @return Input queue
+             */
+            std::shared_ptr<InputQueue> input() {
+                return m_input_queue;
+            }
+
+            /**
+             * Gets the output queue associated with this worker pool
+             *
+             * @return Output queue
+             */
+            std::shared_ptr<OutputQueue> output() {
+                return m_output_queue;
+            }
+
+            /**
+             * Sets the worker pool's input queue
+             *
+             * @param in Input queue
+             */
+            void set_input(std::shared_ptr<InputQueue> in) {
+                m_input_queue = in;
+            }
+
+            /**
+             * Sets the worker pool's output queue
+             *
+             * @param out Output queue
+             */
+            void set_output(std::shared_ptr<OutputQueue> out) {
+                m_output_queue = out;
+            }
+
+            /**
+             * Stops the worker pool ASAP. Clears and finishes the input and
+             * output queues
+             */
+            void stop() {
+                m_input_queue->finish();
+                m_input_queue->clear();
+                m_output_queue->finish();
+                m_output_queue->clear();
+
+                m_stopped = true;
+            }
+
+            /**
+             * Checks whether this worker pool has been stopped
+             *
+             * @return true if this pool has been stopped, false otherwise
+             */
+            bool stopped() {
+                return m_stopped;
+            }
+
+            /**
+             * Signal that a worker has finished. Decrements the active worker
+             * count. Once the active worker count reaches zero, the output
+             * queue is finished
+             */
+            void signal_done() override {
+                std::lock_guard lock(m_mutex);
+                m_active_workers--;
+
+                if (m_active_workers == 0) {
+                    m_output_queue->finish();
+                }
+            }
+
+            /**
+             * Joins all of the worker threads
+             */
+            void join_all() override {
+                for (auto& worker : m_workers) {
+                    worker->join();
+                }
+            }
+
+        protected:
+            std::shared_ptr<InputQueue> m_input_queue;
+            std::shared_ptr<OutputQueue> m_output_queue;
+            mutable std::mutex m_mutex;
+            size_t m_active_workers;
+            std::vector<std::unique_ptr<W>> m_workers;
+            bool m_stopped;
     };
 
     /**
