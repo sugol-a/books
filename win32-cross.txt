@@ -1,0 +1,31 @@
+[binaries]
+c='x86_64-w64-mingw32-gcc'
+cpp='x86_64-w64-mingw32-g++'
+fortran='x86_64-w64-mingw32-gfortran'
+ar='x86_64-w64-mingw32-gcc-ar'
+pkgconfig='x86_64-w64-mingw32-pkg-config'
+ranlib='x86_64-w64-mingw32-gcc-ranlib'
+strip='x86_64-w64-mingw32-strip'
+windres='x86_64-w64-mingw32-windres'
+cmake='x86_64-w64-mingw32-cmake'
+ld='x86_64-w64-mingw32-ld'
+exe_wrapper='wine'
+
+[properties]
+root='x86_64-w64-mingw32'
+sys_root='/usr/x86_64-w64-mingw32'
+needs_exe_wrapper=true
+
+[built-in options]
+c_args=['-D_FORTIFY_SOURCE=2', '-D_GLIBCXX_ASSERTIONS', '-O2', '-pipe', '-fno-plt', '-fexceptions', '--param=ssp-buffer-size=4', '-Wformat', '-Werror=format-security', '-fcf-protection']
+cpp_args=['-D_FORTIFY_SOURCE=2', '-D_GLIBCXX_ASSERTIONS', '-O2', '-pipe', '-fno-plt', '-fexceptions', '--param=ssp-buffer-size=4', '-Wformat', '-Werror=format-security', '-fcf-protection']
+c_link_args=['-Wl,-O1,--sort-common,--as-needed', '-fstack-protector']
+cpp_link_args=['-Wl,-O1,--sort-common,--as-needed', '-fstack-protector']
+prefix='/usr/x86_64-w64-mingw32/'
+
+[host_machine]
+system='windows'
+cpu_family='x86_64'
+cpu='x86_64'
+endian='little'
+
